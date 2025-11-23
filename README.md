@@ -1,36 +1,21 @@
-# Rspack project
+# 在线简历编辑系统
 
-## Setup
+## 项目使用
 
-Install the dependencies:
-
-```bash
-npm install
-```
-
-## Get started
-
-Start the dev server, and the app will be available at <http://localhost:8080>.
+### 下载依赖
 
 ```bash
-npm run dev
+pnpm i
 ```
 
-Build the app for production:
+### 启动热重载
 
 ```bash
-npm run build
+pnpm dev
 ```
 
-Preview the production build locally:
+### 打包
 
 ```bash
-npm run preview
+pnpm build
 ```
-
-## Learn more
-
-To learn more about Rspack, check out the following resources:
-
-- [Rspack documentation](https://rspack.rs) - explore Rspack features and APIs.
-- [Rspack GitHub repository](https://github.com/web-infra-dev/rspack) - your feedback and contributions are welcome!
