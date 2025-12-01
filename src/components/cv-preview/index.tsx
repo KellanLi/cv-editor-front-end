@@ -8,8 +8,24 @@ const CVPreview: FC<CVPreviewProps> = (props) => {
 
   return (
     <div style={{ width }}>
-      <h1>CV Preview</h1>
-      <p>This is a preview of the CV.</p>
+      <header>
+        <div>
+          <div>{cvData.name}</div>
+          <div>{cvData.targetPosition}</div>
+          <ul>
+            {cvData.basicInfo?.map((item) => (
+              <li key={item.label}>
+                {item.icon}
+                {item.value}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {cvData.profilePicture && (
+          <img src={cvData.profilePicture} alt="证件照" />
+        )}
+      </header>
+      <main></main>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { createHashRouter } from 'react-router';
+import { createHashRouter, Navigate } from 'react-router';
 import CVEditPage from '@/pages/cv-edit-page';
 import CVPreviewPage from '@/pages/cv-preview-page';
 import CVManagePage from '@/pages/cv-manage-page';
@@ -16,6 +16,10 @@ const router = createHashRouter([
   {
     path: PathEnum.CV_MANAGE,
     element: <CVManagePage />,
+  },
+  {
+    path: '*',
+    element: <Navigate to={PathEnum.CV_PREVIEW} />,
   },
 ]);
 
