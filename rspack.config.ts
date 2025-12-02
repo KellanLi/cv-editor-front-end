@@ -48,6 +48,18 @@ export default defineConfig({
           },
         ],
       },
+      {
+        test: /\.(jpg|jpeg|png|gif)$/i, // 匹配 .jpg, .jpeg, .png, .gif 文件
+        use: [
+          {
+            loader: 'file-loader', // 使用 file-loader 来处理图片
+            options: {
+              name: '[name].[hash:8].[ext]', // 输出文件的命名规则
+              outputPath: 'assets/images/', // 图片输出的路径
+            },
+          },
+        ],
+      },
     ],
   },
   plugins: [
