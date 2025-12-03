@@ -25,7 +25,7 @@ export interface CVPreviewProps {
   width?: number;
   cvData?: {
     profilePicture?: string;
-    name?: string;
+    fullName?: string;
     targetPosition?: string;
     basicInfo?: BasicItem[];
     detailedInfo?: DetailedItem[];

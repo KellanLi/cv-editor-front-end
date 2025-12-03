@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 import type { CVPreviewProps } from './types';
+import * as styles from './index.module.less';
 
 const CVPreview: FC<CVPreviewProps> = (props) => {
   const { cvData, width = 600 } = props;
@@ -7,10 +8,10 @@ const CVPreview: FC<CVPreviewProps> = (props) => {
   if (!cvData) return null;
 
   return (
-    <div style={{ width }}>
-      <header>
+    <div style={{ width }} className={styles.cvPreview}>
+      <header className={styles.baseInfo}>
         <div>
-          <div>{cvData.name}</div>
+          <div>{cvData.fullName}</div>
           <div>{cvData.targetPosition}</div>
           <ul>
             {cvData.basicInfo?.map((item) => (
@@ -22,7 +23,11 @@ const CVPreview: FC<CVPreviewProps> = (props) => {
           </ul>
         </div>
         {cvData.profilePicture && (
-          <img src={cvData.profilePicture} alt="证件照" />
+          <img
+            className={styles.profileImage}
+            src={cvData.profilePicture}
+            alt="证件照"
+          />
         )}
       </header>
       <main></main>

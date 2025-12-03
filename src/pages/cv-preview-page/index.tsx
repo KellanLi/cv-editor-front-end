@@ -5,7 +5,7 @@ import profilePicture from '@/assets/profile-picture.jpg';
 
 const mockData: CVPreviewProps = {
   cvData: {
-    name: 'John Doe',
+    fullName: 'John Doe',
     profilePicture,
     targetPosition: 'Software Engineer',
   },

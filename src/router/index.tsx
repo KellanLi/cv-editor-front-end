@@ -19,7 +19,7 @@ const router = createHashRouter([
   },
   {
     path: '*',
-    element: <Navigate to={PathEnum.CV_PREVIEW} />,
+    element: <Navigate to={PathEnum.CV_EDIT} />,
   },
 ]);
 

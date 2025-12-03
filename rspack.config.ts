@@ -60,6 +60,14 @@ export default defineConfig({
           },
         ],
       },
+      {
+        test: /\.less$/, // 匹配所有 .less 文件
+        use: [
+          'style-loader', // 将 CSS 插入到页面中
+          'css-loader', // 处理 CSS 文件
+          'less-loader', // 编译 LESS 文件
+        ],
+      },
     ],
   },
   plugins: [
