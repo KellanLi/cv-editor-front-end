@@ -1,7 +1,7 @@
 import { type FC } from 'react';
-import { Col, Form, Input, Row } from 'antd';
+import { Col, Form, Input, Row, Button, Flex } from 'antd';
 import BlockTitle from '../block-title';
-import { UserOutlined } from '@ant-design/icons';
+import { CloseOutlined, FormOutlined, UserOutlined } from '@ant-design/icons';
 
 const ContentForm: FC = () => {
   return (
@@ -10,7 +10,7 @@ const ContentForm: FC = () => {
         padding: 10,
       }}
     >
-      <BlockTitle title="基本信息" icon={<UserOutlined />} editable />
+      <BlockTitle title="基本信息" icon={<UserOutlined />} size="large" />
       <Form layout="vertical">
         <Form.Item label="头像" name="profilePicture">
           <Input />
@@ -51,6 +51,39 @@ const ContentForm: FC = () => {
             </Form.Item>
           </Col>
         </Row>
+        <Form.List name="moreInfo">
+          {(fields, { add, remove }) => (
+            <Flex vertical gap={16}>
+              {fields.map((field) => (
+                <Flex gap={16} key={field.key}>
+                  <Form.Item
+                    noStyle
+                    style={{ flex: 1 }}
+                    name={[field.name, 'label']}
+                  >
+                    <Input placeholder="名称" />
+                  </Form.Item>
+                  <Form.Item
+                    noStyle
+                    style={{ flex: 1 }}
+                    name={[field.name, 'value']}
+                  >
+                    <Input placeholder="值" />
+                  </Form.Item>
+                  <CloseOutlined
+                    onClick={() => {
+                      remove(field.name);
+                    }}
+                  />
+                </Flex>
+              ))}
+              <Button type="dashed" onClick={() => add()} block>
+                + 添加子项
+              </Button>
+            </Flex>
+          )}
+        </Form.List>
+        <BlockTitle title="详细介绍" icon={<FormOutlined />} size="large" />
       </Form>
     </div>
   );
