@@ -76,7 +76,7 @@ const CVEditPage: FC = () => {
         />
         <div
           className={styles.homeButton}
-          onClick={() => navigate(PathEnum.CV_MANAGE)}
+          onClick={() => navigate(PathEnum.HOME)}
         >
           <HomeOutlined />
         </div>
