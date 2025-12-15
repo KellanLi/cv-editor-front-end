@@ -1,14 +1,22 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Flex } from 'antd';
-import { type FC } from 'react';
+import { useRef, type FC } from 'react';
+import CreateTemplateModal, { ICreateTemplateModalRef } from './components/create-template-modal';
 
 const listData: unknown[] = [];
 
 const TemplateManagePage: FC = () => {
+  const createTemplateModalRef = useRef<ICreateTemplateModalRef>(null);
+
+
   return (
     <div>
       <div>
-        <Button>创建模版</Button>
+        <Button onClick={() => {
+          createTemplateModalRef.current?.open();
+        }}>
+          创建模版
+        </Button>
       </div>
       <Flex>
         {listData.length === 0 ? (
@@ -21,6 +29,7 @@ const TemplateManagePage: FC = () => {
           listData.map(() => <Card></Card>)
         )}
       </Flex>
+      <CreateTemplateModal ref={createTemplateModalRef}/>
     </div>
   );
 };
