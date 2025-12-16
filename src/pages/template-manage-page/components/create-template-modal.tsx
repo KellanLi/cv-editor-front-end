@@ -1,4 +1,5 @@
-import { Modal } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Flex, Form, Input, Modal, ModalProps } from 'antd';
 import { useImperativeHandle, useState, type FC } from 'react';
 
 export interface ICreateTemplateModalRef {
@@ -17,9 +18,37 @@ const CreateTemplateModal: FC<{
       },
     };
   });
-  return <Modal open={open} onCancel={() => {
-    setOpen(false);
-  }}></Modal>;
+
+  const modalProps: ModalProps = {
+    width: 960,
+    title: '创建模板',
+    open,
+    onCancel: () => {
+      setOpen(false);
+    },
+    onOk: () => {},
+    okText: '创建',
+    cancelText: '取消',
+  };
+
+  return (
+    <Modal {...modalProps}>
+      <Flex gap={20}>
+        <Form layout="vertical" style={{ flex: 1 }}>
+          <Form.Item name="template_name" label="模板名称">
+            <Input />
+          </Form.Item>
+          <Form.Item name="template_layers" label="前端层"></Form.Item>
+          <Form.Item>
+            <Button type="dashed" style={{ width: '100%' }}>
+              <PlusOutlined />
+            </Button>
+          </Form.Item>
+        </Form>
+        <div style={{ flex: 1 }}>预览</div>
+      </Flex>
+    </Modal>
+  );
 };
 
 export default CreateTemplateModal;
