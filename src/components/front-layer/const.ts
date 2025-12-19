@@ -1,4 +1,11 @@
 import SingleTitle from './single-title';
+import SingleDescription from './single-description';
+import SingleTime from './single-time';
+import SingleDetailedDescription from './single-detailed-description';
+import SingleLink from './single-link';
+import LeftTitleRightDescription from './left-title-right-description';
+import LeftTitleDescriptionRightTime from './left-title-description-right-time';
+import LeftTitleDescriptionRightTimePlace from './left-title-description-right-time-place';
 
 /** 前端层类型 */
 export const enum FrontLayerType {
@@ -22,4 +29,12 @@ export const enum FrontLayerType {
 
 export const FrontLayerMap = {
   [FrontLayerType.SingleTitle]: SingleTitle,
+  [FrontLayerType.SingleDescription]: SingleDescription,
+  [FrontLayerType.SingleTime]: SingleTime,
+  [FrontLayerType.SingleDetailedDescription]: SingleDetailedDescription,
+  [FrontLayerType.SingleLink]: SingleLink,
+  [FrontLayerType.LeftTitleRightDescription]: LeftTitleRightDescription,
+  [FrontLayerType.LeftTitleDescriptionRightTime]: LeftTitleDescriptionRightTime,
+  [FrontLayerType.LeftTitleDescriptionRightTimePlace]:
+    LeftTitleDescriptionRightTimePlace,
 };
