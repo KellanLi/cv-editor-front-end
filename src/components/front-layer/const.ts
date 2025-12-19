@@ -38,3 +38,15 @@ export const FrontLayerMap = {
   [FrontLayerType.LeftTitleDescriptionRightTimePlace]:
     LeftTitleDescriptionRightTimePlace,
 };
+
+export const FrontLayerNameMap = {
+  [FrontLayerType.SingleTitle]: '单标题',
+  [FrontLayerType.SingleDescription]: '单描述',
+  [FrontLayerType.SingleTime]: '单时间',
+  [FrontLayerType.SingleDetailedDescription]: '单详细描述',
+  [FrontLayerType.SingleLink]: '单链接',
+  [FrontLayerType.LeftTitleRightDescription]: '左标题右描述',
+  [FrontLayerType.LeftTitleDescriptionRightTime]: '左标题+描述，右时间',
+  [FrontLayerType.LeftTitleDescriptionRightTimePlace]:
+    '左标题+描述，右时间+地点',
+};

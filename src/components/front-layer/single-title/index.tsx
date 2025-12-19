@@ -1,7 +1,7 @@
 import { type FC } from 'react';
 
 export interface SingleTitleProps {
-  title: string;
+  title?: string;
 }
 
 /** 单标题 */
