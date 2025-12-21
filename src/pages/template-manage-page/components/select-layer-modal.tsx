@@ -6,12 +6,12 @@ import {
 } from '@/components/front-layer/const';
 import { LayerPreview } from '@/components/front-layer';
 
-interface ICreateTemplateModalRef {
+export interface ISelectLayerModalRef {
   open: () => void;
 }
 
 interface SelectLayerModalProps {
-  ref?: React.RefObject<ICreateTemplateModalRef | null>;
+  ref?: React.RefObject<ISelectLayerModalRef | null>;
 }
 
 const SelectLayerModal: FC<SelectLayerModalProps> = (props) => {

@@ -1,6 +1,7 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Flex, Form, Input, Modal, ModalProps } from 'antd';
-import { useImperativeHandle, useState, type FC } from 'react';
+import { useImperativeHandle, useRef, useState, type FC } from 'react';
+import SelectLayerModal, { ISelectLayerModalRef } from './select-layer-modal';
 
 export interface ICreateTemplateModalRef {
   open: () => void;
@@ -9,6 +10,7 @@ export interface ICreateTemplateModalRef {
 const CreateTemplateModal: FC<{
   ref?: React.RefObject<ICreateTemplateModalRef | null>;
 }> = ({ ref }) => {
+  const selectLayerModalRef = useRef<ISelectLayerModalRef | null>(null);
   const [open, setOpen] = useState(false);
 
   useImperativeHandle(ref, () => {
@@ -40,13 +42,20 @@ const CreateTemplateModal: FC<{
           </Form.Item>
           <Form.Item name="template_layers" label="前端层"></Form.Item>
           <Form.Item>
-            <Button type="dashed" style={{ width: '100%' }}>
+            <Button
+              type="dashed"
+              style={{ width: '100%' }}
+              onClick={() => {
+                selectLayerModalRef.current?.open();
+              }}
+            >
               <PlusOutlined />
             </Button>
           </Form.Item>
         </Form>
         <div style={{ flex: 1 }}>预览</div>
       </Flex>
+      <SelectLayerModal ref={selectLayerModalRef} />
     </Modal>
   );
 };
