@@ -15,12 +15,13 @@ export interface ISelectLayerModalRef {
 
 interface SelectLayerModalProps {
   ref?: React.RefObject<ISelectLayerModalRef | null>;
+  onOk?: (selectedKeys: FrontLayerType[]) => void;
 }
 
 const SelectLayerModal: FC<SelectLayerModalProps> = (props) => {
-  const { ref } = props;
+  const { ref, onOk } = props;
   const [open, setOpen] = useState(false);
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<FrontLayerType[]>([]);
 
   useImperativeHandle(ref, () => {
     return {
@@ -38,7 +39,9 @@ const SelectLayerModal: FC<SelectLayerModalProps> = (props) => {
     onCancel: () => {
       setOpen(false);
     },
-    onOk: () => {},
+    onOk: () => {
+      onOk?.(selectedKeys);
+    },
     okText: '确定',
     cancelText: '取消',
   };
@@ -54,13 +57,13 @@ const SelectLayerModal: FC<SelectLayerModalProps> = (props) => {
               key={key}
               className={genClassNames({
                 [styles.layerItem]: true,
-                [styles.selected]: selectedKeys.includes(key),
+                [styles.selected]: selectedKeys.includes(layerType),
               })}
               onClick={() => {
-                if (selectedKeys.includes(key)) {
-                  setSelectedKeys(selectedKeys.filter((k) => k !== key));
+                if (selectedKeys.includes(layerType)) {
+                  setSelectedKeys(selectedKeys.filter((k) => k !== layerType));
                 } else {
-                  setSelectedKeys([...selectedKeys, key]);
+                  setSelectedKeys([...selectedKeys, layerType]);
                 }
               }}
             >
