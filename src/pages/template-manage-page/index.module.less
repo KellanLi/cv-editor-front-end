@@ -1,0 +1,20 @@
+.selectLayerModal {
+  .innerWrapper {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 20px;
+
+    .layerItem {
+      cursor: pointer;
+      border-radius: 5px;
+      transition: all 0.1s;
+    }
+
+    .selected {
+      transform: scale(1.05);
+      background-color: #1777ff;
+      // box-shadow: 0 0 5px #1777ff;
+      transition: all 0.1s;
+    }
+  }
+}
