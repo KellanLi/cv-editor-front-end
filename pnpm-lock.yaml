@@ -51,6 +51,9 @@ importers:
       '@types/react':
         specifier: ^19.1.13
         version: 19.2.5
+      '@types/react-beautiful-dnd':
+        specifier: ^13.1.8
+        version: 13.1.8
       '@types/react-dom':
         specifier: ^19.1.9
         version: 19.2.3(@types/react@19.2.5)
@@ -787,6 +790,9 @@ packages:
 
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
+
+  '@types/react-beautiful-dnd@13.1.8':
+    resolution: {integrity: sha512-E3TyFsro9pQuK4r8S/OL6G99eq7p8v29sX0PM7oT8Z+PJfZvSQTx4zTQbUJ+QZXioAF0e7TGBEcA1XhYhCweyQ==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -3417,6 +3423,10 @@ snapshots:
   '@types/qs@6.14.0': {}
 
   '@types/range-parser@1.2.7': {}
+
+  '@types/react-beautiful-dnd@13.1.8':
+    dependencies:
+      '@types/react': 19.2.5
 
   '@types/react-dom@19.2.3(@types/react@19.2.5)':
     dependencies:

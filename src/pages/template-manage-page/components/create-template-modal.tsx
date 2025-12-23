@@ -1,7 +1,16 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Flex, Form, Input, Modal, ModalProps } from 'antd';
+import {
+  DragDropContext,
+  Droppable,
+  OnDragEndResponder,
+} from 'react-beautiful-dnd';
 import { useImperativeHandle, useRef, useState, type FC } from 'react';
 import SelectLayerModal, { ISelectLayerModalRef } from './select-layer-modal';
+
+const enum DroppableIds {
+  LAYER = 'layer',
+}
 
 export interface ICreateTemplateModalRef {
   open: () => void;
@@ -33,30 +42,53 @@ const CreateTemplateModal: FC<{
     cancelText: '取消',
   };
 
+  const onDragEnd: OnDragEndResponder = (result) => {
+    console.log(result);
+  };
+
   return (
-    <Modal {...modalProps}>
-      <Flex gap={20}>
-        <Form layout="vertical" style={{ flex: 1 }}>
-          <Form.Item name="template_name" label="模板名称">
-            <Input />
-          </Form.Item>
-          <Form.Item name="template_layers" label="前端层"></Form.Item>
-          <Form.Item>
-            <Button
-              type="dashed"
-              style={{ width: '100%' }}
-              onClick={() => {
-                selectLayerModalRef.current?.open();
-              }}
-            >
-              <PlusOutlined />
-            </Button>
-          </Form.Item>
-        </Form>
-        <div style={{ flex: 1 }}>预览</div>
-      </Flex>
-      <SelectLayerModal ref={selectLayerModalRef} />
-    </Modal>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Modal {...modalProps}>
+        <Flex gap={20}>
+          <Form layout="vertical" style={{ flex: 1 }}>
+            <Form.Item name="template_name" label="模板名称">
+              <Input />
+            </Form.Item>
+            <Form.Item name="template_layers" label="前端层">
+              <Droppable droppableId={DroppableIds.LAYER}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    style={{
+                      backgroundColor: snapshot.isDraggingOver
+                        ? 'blue'
+                        : 'grey',
+                    }}
+                    {...provided.droppableProps}
+                  >
+                    <h2>I am a droppable!</h2>
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="dashed"
+                style={{ width: '100%' }}
+                onClick={() => {
+                  selectLayerModalRef.current?.open();
+                }}
+              >
+                <PlusOutlined />
+              </Button>
+            </Form.Item>
+          </Form>
+          <div style={{ flex: 1 }}>预览</div>
+        </Flex>
+        <SelectLayerModal ref={selectLayerModalRef} />
+      </Modal>
+    </DragDropContext>
   );
 };
 
