@@ -38,9 +38,12 @@ const SelectLayerModal: FC<SelectLayerModalProps> = (props) => {
     open,
     onCancel: () => {
       setOpen(false);
+      setSelectedKeys([]);
     },
     onOk: () => {
       onOk?.(selectedKeys);
+      setOpen(false);
+      setSelectedKeys([]);
     },
     okText: '确定',
     cancelText: '取消',

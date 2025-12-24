@@ -2,11 +2,16 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Button, Flex, Form, Input, Modal, ModalProps } from 'antd';
 import {
   DragDropContext,
+  Draggable,
   Droppable,
   OnDragEndResponder,
 } from 'react-beautiful-dnd';
 import { useImperativeHandle, useRef, useState, type FC } from 'react';
 import SelectLayerModal, { ISelectLayerModalRef } from './select-layer-modal';
+import {
+  FrontLayerNameMap,
+  FrontLayerType,
+} from '@/components/front-layer/const';
 
 const enum DroppableIds {
   LAYER = 'layer',
@@ -20,6 +25,7 @@ const CreateTemplateModal: FC<{
   ref?: React.RefObject<ICreateTemplateModalRef | null>;
 }> = ({ ref }) => {
   const selectLayerModalRef = useRef<ISelectLayerModalRef | null>(null);
+  const [layers, setLayers] = useState<FrontLayerType[]>([]);
   const [open, setOpen] = useState(false);
 
   useImperativeHandle(ref, () => {
@@ -67,6 +73,24 @@ const CreateTemplateModal: FC<{
                     {...provided.droppableProps}
                   >
                     <h2>I am a droppable!</h2>
+                    {layers.map((layer, index) => {
+                      return (
+                        <Draggable
+                          draggableId={`${FrontLayerNameMap[layer]}-${layer.toString()}`}
+                          index={index}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <span>{FrontLayerNameMap[layer]}</span>
+                            </div>
+                          )}
+                        </Draggable>
+                      );
+                    })}
                     {provided.placeholder}
                   </div>
                 )}
@@ -86,7 +110,12 @@ const CreateTemplateModal: FC<{
           </Form>
           <div style={{ flex: 1 }}>预览</div>
         </Flex>
-        <SelectLayerModal ref={selectLayerModalRef} />
+        <SelectLayerModal
+          ref={selectLayerModalRef}
+          onOk={(newSelectLayers) => {
+            setLayers([...layers, ...newSelectLayers]);
+          }}
+        />
       </Modal>
     </DragDropContext>
   );
