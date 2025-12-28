@@ -5,8 +5,8 @@ export interface SingleTitleProps {
 }
 
 /** 单标题 */
-const SingleTitle: FC<SingleTitleProps> = ({ title }) => {
-  return <h3>{title}</h3>;
+const SingleTitle: FC<SingleTitleProps> = () => {
+  return <h3>单表题</h3>;
 };
 
 export default SingleTitle;

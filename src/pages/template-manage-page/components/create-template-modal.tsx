@@ -13,6 +13,9 @@ import {
   FrontLayerType,
 } from '@/components/front-layer/const';
 
+import * as styles from '../index.module.less';
+import { genClassNames } from '@/utils';
+
 const enum DroppableIds {
   LAYER = 'layer',
 }
@@ -46,6 +49,7 @@ const CreateTemplateModal: FC<{
     onOk: () => {},
     okText: '创建',
     cancelText: '取消',
+    className: styles.createTemplateModal,
   };
 
   const onDragEnd: OnDragEndResponder = (result) => {
@@ -65,14 +69,12 @@ const CreateTemplateModal: FC<{
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
-                    style={{
-                      backgroundColor: snapshot.isDraggingOver
-                        ? 'blue'
-                        : 'grey',
-                    }}
+                    className={genClassNames({
+                      [styles.templateLayerDrop]: true,
+                      [styles.isDraggingOver]: snapshot.isDraggingOver,
+                    })}
                     {...provided.droppableProps}
                   >
-                    <h2>I am a droppable!</h2>
                     {layers.map((layer, index) => {
                       return (
                         <Draggable
