@@ -20,12 +20,36 @@
 }
 
 .createTemplateModal {
+  @gap-size: 5px;
+
   .templateLayerDrop {
     max-height: 640px;
-    background-color: red;
+    background-color: #f5f5f5;
+    padding: @gap-size;
+    padding-bottom: 0;
+    border-radius: 5px;
+    display: flow-root; // 触发BFC，不兼容IE
 
     &.isDraggingOver {
-      background-color: blue;
+      background-color: #e6f7ff;
+    }
+
+    .dragItem {
+      background-color: #fff;
+      border-radius: 3px;
+      padding: 3px;
+      margin-bottom: @gap-size;
+      display: flex;
+      justify-content: space-between;
+
+      &.isDragging {
+        box-shadow: 0 0 5px #1777ff;
+      }
+
+      .deleteIcon {
+        cursor: pointer;
+        color: #999;
+      }
     }
   }
 }

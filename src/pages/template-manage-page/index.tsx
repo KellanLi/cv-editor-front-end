@@ -1,20 +1,30 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Flex } from 'antd';
 import { useRef, type FC } from 'react';
-import CreateTemplateModal, { ICreateTemplateModalRef } from './components/create-template-modal';
+import CreateTemplateModal, {
+  ICreateTemplateModalRef,
+} from './components/create-template-modal';
 
-const listData: unknown[] = [];
+import type { TCreateTemplate } from '@/hooks/useLocalTemplateLayers/type';
+import useLocalTemplateList from '@/hooks/useLocalTemplateLayers';
 
 const TemplateManagePage: FC = () => {
   const createTemplateModalRef = useRef<ICreateTemplateModalRef>(null);
+  const { addTemplate, getTemplateList } = useLocalTemplateList();
+  const listData = getTemplateList();
 
+  const onCreateOk = (values: TCreateTemplate) => {
+    addTemplate(values);
+  };
 
   return (
     <div>
       <div>
-        <Button onClick={() => {
-          createTemplateModalRef.current?.open();
-        }}>
+        <Button
+          onClick={() => {
+            createTemplateModalRef.current?.open();
+          }}
+        >
           创建模版
         </Button>
       </div>
@@ -26,10 +36,10 @@ const TemplateManagePage: FC = () => {
             </div>
           </Card>
         ) : (
-          listData.map(() => <Card></Card>)
+          listData.map((item) => <Card title={item.template_name}></Card>)
         )}
       </Flex>
-      <CreateTemplateModal ref={createTemplateModalRef}/>
+      <CreateTemplateModal ref={createTemplateModalRef} onOk={onCreateOk} />
     </div>
   );
 };
