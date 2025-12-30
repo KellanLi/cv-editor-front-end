@@ -1,4 +1,4 @@
-import SingleTitle from './single-title';
+import SingleTitle, { SingleTitleProps } from './single-title';
 import SingleDescription from './single-description';
 import SingleTime from './single-time';
 import SingleDetailedDescription from './single-detailed-description';
@@ -49,4 +49,15 @@ export const FrontLayerNameMap = {
   [FrontLayerType.LeftTitleDescriptionRightTime]: '左标题+描述，右时间',
   [FrontLayerType.LeftTitleDescriptionRightTimePlace]:
     '左标题+描述，右时间+地点',
+};
+
+const SingleTitlePreviewProps: SingleTitleProps = {
+  title: '单标题测试内容',
+};
+
+export const FrontLayerPreviewPropsMap = {
+  [FrontLayerType.SingleTitle]: SingleTitlePreviewProps,
+  [FrontLayerType.SingleDescription]: {
+    description: '单描述测试内容',
+  },
 };

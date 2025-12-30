@@ -1,5 +1,9 @@
 import { type FC } from 'react';
-import { FrontLayerType, FrontLayerMap } from './const';
+import {
+  FrontLayerType,
+  FrontLayerMap,
+  FrontLayerPreviewPropsMap,
+} from './const';
 
 import * as style from './index.module.less';
 
@@ -10,6 +14,7 @@ interface LayerPreviewProps {
 export const LayerPreview: FC<LayerPreviewProps> = (props) => {
   const { layerType } = props;
   const FrontLayerComponent = FrontLayerMap[layerType];
+  const previewProps = FrontLayerPreviewPropsMap[layerType];
   return (
     <div className={style.layerPreview}>
       <FrontLayerComponent />
