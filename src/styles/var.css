@@ -1,0 +1,99 @@
+/* src/styles/theme.css */
+:root {
+  /* ========================
+   * 🎨 颜色系统
+   * ======================== */
+
+  /* 主色 */
+  --color-primary: #6366f1;
+  --color-primary-hover: #7374f2;
+
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+
+  /* 文本 */
+  --color-foreground: #1a1d2e;
+  --color-muted: #64748b;
+
+  /* 背景 */
+  --color-background: #fafbfc;
+  --color-card: #ffffff;
+
+  /* 辅助 */
+  --color-accent: #eef2ff;
+  --color-secondary: #f1f5f9;
+
+  /* 状态 */
+  --color-danger: #ef4345;
+  --color-disabled: #b1b2f9;
+
+  /* 边框 */
+  --color-border: #e1e7ef;
+
+
+  /* ========================
+   * 🔤 字体系统
+   * ======================== */
+
+  --font-size-h1: 36px;
+  --font-size-h2: 30px;
+  --font-size-h3: 24px;
+  --font-size-h4: 20px;
+  --font-size-body: 16px;
+  --font-size-small: 14px;
+
+  --font-weight-medium: 500;
+  --font-weight-regular: 400;
+
+
+  /* ========================
+   * 📏 间距系统
+   * ======================== */
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+
+  /* ========================
+   * 🔘 圆角系统
+   * ======================== */
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+
+  /* ========================
+   * 🌫 阴影系统
+   * ======================== */
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.12);
+
+
+  /* ========================
+   * ⏱ 动画
+   * ======================== */
+
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+
+
+  /* ========================
+   * 🧱 组件尺寸
+   * ======================== */
+
+  --btn-height-sm: 32px;
+  --btn-height-md: 36px;
+  --btn-height-lg: 40px;
+
+  --btn-padding-sm: 0 16px;
+  --btn-padding-md: 0 16px;
+  --btn-padding-lg: 0 24px;
+}
