@@ -1,4 +1,5 @@
 import { login } from '@/apis/auth';
+import storage from '@/lib/storage';
 import { TLogin } from '@/types/api/auth/login';
 import {
   Button,
@@ -24,7 +25,8 @@ export default function LoginForm(props: IProps) {
     const formData = new FormData(e.currentTarget);
     const values = Object.fromEntries(formData.entries()) as TLogin;
     try {
-      await login(values);
+      const res = await login(values);
+      storage.setToken(res.data.token);
     } catch (error) {
       console.error('登录失败:', error);
     }
