@@ -11,6 +11,7 @@ import {
   Label,
   TextField,
 } from '@heroui/react';
+import { useRouter } from 'next/navigation';
 import { FormEvent } from 'react';
 
 interface IProps {
@@ -18,6 +19,7 @@ interface IProps {
 }
 
 export default function LoginForm(props: IProps) {
+  const router = useRouter();
   const { onSubmit } = props;
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -27,6 +29,7 @@ export default function LoginForm(props: IProps) {
     try {
       const res = await login(values);
       storage.setToken(res.data.token);
+      router.push('/dashboard/resumes');
     } catch (error) {
       console.error('登录失败:', error);
     }

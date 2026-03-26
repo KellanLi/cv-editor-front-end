@@ -1,4 +1,4 @@
 export type TToken = {
-  token: string;
+  value: string;
   type: string;
-}
+};
