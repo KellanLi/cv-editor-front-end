@@ -6,6 +6,9 @@ import { INavItem } from './_components/side-bar';
 import { usePathname } from 'next/navigation';
 import UserStoreProvider from '@/stores/user/provider';
 import ContentHeader from './_components/content-header';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 const enum PATH_KEY {
   RESUMES = 'resumes',
@@ -49,15 +52,17 @@ export default function DashBoardLayout(props: IProps) {
   const activeKey = pathname.split('/')[2];
   const { children } = props;
   return (
-    <UserStoreProvider>
-      <div className="flex h-lvh">
-        <SideBar navItems={navItems} activeKey={activeKey} />
-        <Separator orientation="vertical" />
-        <main className="flex-1 px-4">
-          <ContentHeader activeKey={activeKey} />
-          <section>{children}</section>
-        </main>
-      </div>
-    </UserStoreProvider>
+    <QueryClientProvider client={queryClient}>
+      <UserStoreProvider>
+        <div className="flex h-lvh">
+          <SideBar navItems={navItems} activeKey={activeKey} />
+          <Separator orientation="vertical" />
+          <main className="flex-1 px-4">
+            <ContentHeader activeKey={activeKey} />
+            <section>{children}</section>
+          </main>
+        </div>
+      </UserStoreProvider>
+    </QueryClientProvider>
   );
 }
