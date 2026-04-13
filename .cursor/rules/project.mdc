@@ -1,0 +1,43 @@
+---
+description: CV editor stack, src layout, domain terms, Section Template vs Info Layer
+alwaysApply: true
+---
+
+# AI 简历编辑（毕设）
+
+## 技术栈
+
+- Next.js（App Router）
+- 包管理：pnpm
+- UI：HeroUI
+
+## `src/` 目录
+
+- **apis**：API 封装
+- **app**：Next.js 页面与路由
+- **components**：全局/跨页组件
+- **lib**：工具与通用逻辑
+- **stores**：Zustand
+- **styles**：全局样式与主题变量
+- **types**：**至少两个文件共用的类型**放此处；单文件类型可就近声明
+
+## 领域名词（中英）
+
+| 中文     | 英文 / 代码用语        |
+| -------- | ---------------------- |
+| 简历     | Resume                 |
+| 模块     | Section                |
+| 模块内容 | Section Context / Context |
+| 模块模版 | Section Template       |
+| 信息层   | Info Layer             |
+
+## 模块与信息层
+
+- 简历由多个 **Section** 组成；每类经历/区块对应一种 **Section Template**（固定字段结构）。
+- **Section Template** 由若干 **Info Layer** 拼接而成；用户为每层字段配置显示名称（如「职位名称」「实习 base」）。
+- 系统提供三种 **Info Layer**：左标题右时间段、左右文字、富文本。
+
+## 产品事实（易混点）
+
+- **无独立「信息层列表」页**：仅三个信息层；在创建/编辑 **Section Template** 时用弹窗选择信息层即可。
+- **「用户模块」相关列表**面向用户文案；实际管理对象是 **Section Template**（模块模版）。
