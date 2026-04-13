@@ -10,7 +10,7 @@ export default function InfoLayerModal() {
         添加
       </Button>
       <Modal.Backdrop>
-        <Modal.Container size="lg">
+        <Modal.Container>
           <Modal.Dialog>
             <Modal.CloseTrigger />
             <Modal.Header>

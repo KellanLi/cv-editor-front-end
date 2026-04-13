@@ -6,6 +6,7 @@ import {
   RangeCalendar,
   TextField,
 } from '@heroui/react';
+import { parseDate } from '@internationalized/date';
 import InfoLayerHoc, { TFormFC, TShowFC, TWrapperFC } from './hoc';
 
 const Wrapper: TWrapperFC = ({ children }) => (
@@ -13,6 +14,7 @@ const Wrapper: TWrapperFC = ({ children }) => (
 );
 
 const Form: TFormFC = ({ labels, values, onChange }) => {
+  const { start, end } = JSON.parse(values[1]);
   return (
     <>
       <TextField>
@@ -22,7 +24,21 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
           onChange={(e) => onChange([e.target.value, values[1]])}
         />
       </TextField>
-      <DateRangePicker className="w-72" endName="endDate" startName="startDate">
+      <DateRangePicker
+        className="w-72"
+        endName="endDate"
+        startName="startDate"
+        value={{ start: parseDate(start), end: parseDate(end) }}
+        onChange={(value) =>
+          onChange([
+            values[0],
+            JSON.stringify({
+              start: value?.start?.toString(),
+              end: value?.end?.toString(),
+            }),
+          ])
+        }
+      >
         <Label>{labels[1]}</Label>
         <DateField.Group fullWidth>
           <DateField.Input slot="start">
@@ -71,10 +87,13 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
 };
 
 const Show: TShowFC = ({ values }) => {
+  const { start, end } = JSON.parse(values[1]);
   return (
     <>
-      <div>{values[0]}</div>
-      <div>{values[1]}</div>
+      <div className="text-lg font-bold">{values[0]}</div>
+      <div className="text-lg font-bold">
+        {start} ~ {end}
+      </div>
     </>
   );
 };

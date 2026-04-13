@@ -15,7 +15,7 @@ export const INFO_LAYER_MAP = {
     defaultProps: {
       active: false,
       labels: ['标题', '时间段'],
-      values: ['', ''],
+      values: ['示例标题', '{"start":"2026-04-01","end":"2026-04-18"}'],
       onChange: (values: string[]) => {
         console.log('onChange', values);
       },
@@ -27,7 +27,7 @@ export const INFO_LAYER_MAP = {
     defaultProps: {
       active: false,
       labels: ['左文本', '右文本'],
-      values: ['', ''],
+      values: ['示例左文本', '示例右文本'],
       onChange: (values: string[]) => {
         console.log('onChange', values);
       },
@@ -39,7 +39,7 @@ export const INFO_LAYER_MAP = {
     defaultProps: {
       active: false,
       labels: ['富文本'],
-      values: [''],
+      values: ['<p>示例富文本</p>'],
       onChange: (values: string[]) => {
         console.log('onChange', values);
       },
