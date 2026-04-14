@@ -1,4 +1,3 @@
-import { INFO_LAYER_MAP } from '@/components/info-layer/const';
 import { TContentTemplateItem } from '@/types/api/section/list';
 import {
   Button,
@@ -10,8 +9,8 @@ import {
   Surface,
   Modal,
 } from '@heroui/react';
-import { Plus } from 'lucide-react';
 import { Ref, useImperativeHandle, useState } from 'react';
+import InfoLayerModal from './info-layer-modal';
 
 interface IProps {
   ref: Ref<unknown>;
@@ -53,46 +52,7 @@ export default function SectionBuilder(props: IProps) {
                   <section>
                     <div className="flex justify-between">
                       <Label>信息层</Label>
-                      <Modal>
-                        <Button variant="ghost">
-                          <Plus />
-                          添加
-                        </Button>
-                        <Modal.Backdrop>
-                          <Modal.Container size="lg">
-                            <Modal.Dialog>
-                              <Modal.CloseTrigger />
-                              <Modal.Header>
-                                <Modal.Heading>添加信息层</Modal.Heading>
-                              </Modal.Header>
-                              <Modal.Body>
-                                <div className="flex flex-col gap-4">
-                                  {Object.entries(INFO_LAYER_MAP).map(
-                                    ([key, value]) => {
-                                      const {
-                                        component: InfoLayer,
-                                        name,
-                                        defaultProps,
-                                      } = value;
-
-                                      return (
-                                        <Surface
-                                          className="rounded-3xl p-6"
-                                          key={key}
-                                          variant="secondary"
-                                        >
-                                          <div>{name}</div>
-                                          {<InfoLayer {...defaultProps} />}
-                                        </Surface>
-                                      );
-                                    },
-                                  )}
-                                </div>
-                              </Modal.Body>
-                            </Modal.Dialog>
-                          </Modal.Container>
-                        </Modal.Backdrop>
-                      </Modal>
+                      <InfoLayerModal onOk={() => {}} />
                     </div>
                     <Surface variant="secondary"></Surface>
                   </section>
