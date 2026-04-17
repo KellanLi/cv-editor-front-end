@@ -1,3 +1,5 @@
+'use client';
+
 import { TContentTemplateItem } from '@/types/api/section/list';
 import {
   Button,
@@ -11,6 +13,11 @@ import {
 } from '@heroui/react';
 import { Ref, useImperativeHandle, useState } from 'react';
 import InfoLayerModal from './info-layer-modal';
+import InfoLayerFieldList, {
+  createInfoLayerRow,
+  InfoLayerRow,
+  normalizeOrders,
+} from './info-layer-field-list';
 
 interface IProps {
   ref: Ref<unknown>;
@@ -21,10 +28,23 @@ export default function SectionBuilder(props: IProps) {
   const { ref, className } = props;
   const overlayState = useOverlayState();
   const [item, setItem] = useState<TContentTemplateItem | null>(null);
+  const [infoLayers, setInfoLayers] = useState<InfoLayerRow[]>([]);
+
   useImperativeHandle(ref, () => {
     return {
-      open: (item: TContentTemplateItem) => {
-        setItem(item);
+      open: (next: TContentTemplateItem | null) => {
+        setItem(next);
+        if (next?.infoTemplates?.length) {
+          setInfoLayers(
+            next.infoTemplates.map((t, i) => ({
+              ...t,
+              keyId: crypto.randomUUID(),
+              order: i,
+            })),
+          );
+        } else {
+          setInfoLayers([]);
+        }
         overlayState.open();
       },
     };
@@ -32,8 +52,20 @@ export default function SectionBuilder(props: IProps) {
 
   return (
     <Modal>
-      <Button className={className}>创建</Button>
-      <Modal.Backdrop>
+      <Button
+        className={className}
+        onPress={() => {
+          setItem(null);
+          setInfoLayers([]);
+          overlayState.open();
+        }}
+      >
+        创建
+      </Button>
+      <Modal.Backdrop
+        isOpen={overlayState.isOpen}
+        onOpenChange={overlayState.setOpen}
+      >
         <Modal.Container size="cover">
           <Modal.Dialog>
             <Modal.CloseTrigger />
@@ -52,9 +84,23 @@ export default function SectionBuilder(props: IProps) {
                   <section>
                     <div className="flex justify-between">
                       <Label>信息层</Label>
-                      <InfoLayerModal onOk={() => {}} />
+                      <InfoLayerModal
+                        onOk={(type) => {
+                          setInfoLayers((prev) =>
+                            normalizeOrders([...prev, createInfoLayerRow(type)]),
+                          );
+                        }}
+                      />
                     </div>
-                    <Surface variant="secondary"></Surface>
+                    <Surface
+                      variant="secondary"
+                      className="mt-2 rounded-2xl p-4"
+                    >
+                      <InfoLayerFieldList
+                        layers={infoLayers}
+                        onLayersChange={setInfoLayers}
+                      />
+                    </Surface>
                   </section>
                 </section>
                 <Separator className="mx-2" orientation="vertical" />
