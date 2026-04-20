@@ -21,7 +21,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button, Input, Label, TextField } from '@heroui/react';
+import {
+  Button,
+  FieldError,
+  Input,
+  Label,
+  TextField,
+} from '@heroui/react';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
@@ -111,19 +117,23 @@ function SortableLayerRow(props: SortableRowProps) {
             const base =
               labelSource[fieldIndex] ?? `字段 ${fieldIndex + 1}`;
             return (
-              <TextField key={`${row.keyId}-field-${fieldIndex}`}>
+              <TextField
+                key={`${row.keyId}-field-${fieldIndex}`}
+                isRequired
+                value={name}
+                onChange={(next) =>
+                  onNameChange(row.keyId, fieldIndex, next)
+                }
+                validate={(value) =>
+                  !value?.trim() ? '请填写字段名称' : null
+                }
+              >
                 <Label>
                   {base}
                   字段名称
                 </Label>
-                <Input
-                  variant="secondary"
-                  placeholder="请输入"
-                  value={name}
-                  onChange={(e) =>
-                    onNameChange(row.keyId, fieldIndex, e.target.value)
-                  }
-                />
+                <Input variant="secondary" placeholder="请输入" />
+                <FieldError />
               </TextField>
             );
           })}
