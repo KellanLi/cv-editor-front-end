@@ -90,8 +90,8 @@ const Show: TShowFC = ({ values }) => {
   const { start, end } = JSON.parse(values[1]);
   return (
     <>
-      <div className="text-lg font-bold">{values[0]}</div>
-      <div className="text-lg font-bold">
+      <div className="text-base font-bold">{values[0]}</div>
+      <div className="text-base font-bold">
         {start} ~ {end}
       </div>
     </>

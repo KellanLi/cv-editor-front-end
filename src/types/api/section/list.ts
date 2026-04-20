@@ -1,19 +1,17 @@
-import { TContentTemplate } from '@/types/business/content-template';
-import { TInfoTemplate } from '@/types/business/info-template';
-import { IPagination } from '../pagination';
+import type { TContentTemplateDto } from '@/types/api/content-template/dto';
+import type {
+  TContentTemplateListReq,
+  TContentTemplateListRes,
+} from '@/types/api/content-template/list';
+import type { TInfoTemplate } from '@/types/business/info-template';
 
-export type TContentTemplateItem = TContentTemplate & {
-  infoTemplates: TInfoTemplate[];
+export type TList = TContentTemplateListReq;
+
+/** 列表项：接口为 `ContentTemplateDto`；若服务端附带信息层可写入 `infoTemplates` */
+export type TContentTemplateItem = TContentTemplateDto & {
+  infoTemplates?: TInfoTemplate[];
 };
 
-export type TList = {
-  filter: {
-    name?: string;
-  };
-  pagination: IPagination;
-};
-
-export type TListRes = {
+export type TListRes = Omit<TContentTemplateListRes, 'list'> & {
   list: TContentTemplateItem[];
-  pagination: IPagination;
 };

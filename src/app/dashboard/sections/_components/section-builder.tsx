@@ -1,6 +1,8 @@
 'use client';
 
+import { create } from '@/apis/content-template';
 import { TContentTemplateItem } from '@/types/api/section/list';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Input,
@@ -18,33 +20,59 @@ import InfoLayerFieldList, {
   InfoLayerRow,
   normalizeOrders,
 } from './info-layer-field-list';
+import SectionRender from '@/components/section-render';
+import { INFO_LAYER, INFO_LAYER_MAP } from '@/components/info-layer/const';
+
+export type SectionBuilderHandle = {
+  open: (next: TContentTemplateItem | null) => void;
+};
 
 interface IProps {
-  ref: Ref<unknown>;
+  ref: Ref<SectionBuilderHandle | null>;
   className?: string;
 }
 
 export default function SectionBuilder(props: IProps) {
   const { ref, className } = props;
+  const queryClient = useQueryClient();
   const overlayState = useOverlayState();
   const [item, setItem] = useState<TContentTemplateItem | null>(null);
+  const [sectionName, setSectionName] = useState('');
   const [infoLayers, setInfoLayers] = useState<InfoLayerRow[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: create,
+    onSuccess: (res) => {
+      if (res.code !== 0) {
+        setSubmitError(res.message || '创建失败');
+        return;
+      }
+      void queryClient.invalidateQueries({ queryKey: ['section-list'] });
+      setSubmitError(null);
+      setItem(null);
+      setSectionName('');
+      setInfoLayers([]);
+      overlayState.close();
+    },
+    onError: (err) => {
+      setSubmitError(err instanceof Error ? err.message : '创建失败');
+    },
+  });
 
   useImperativeHandle(ref, () => {
     return {
       open: (next: TContentTemplateItem | null) => {
+        setSubmitError(null);
         setItem(next);
-        if (next?.infoTemplates?.length) {
-          setInfoLayers(
-            next.infoTemplates.map((t, i) => ({
-              ...t,
-              keyId: crypto.randomUUID(),
-              order: i,
-            })),
-          );
-        } else {
-          setInfoLayers([]);
-        }
+        setSectionName(next?.name || '');
+        setInfoLayers(
+          next?.infoTemplates?.map((t, i) => ({
+            ...t,
+            keyId: crypto.randomUUID(),
+            order: i,
+          })) || [],
+        );
         overlayState.open();
       },
     };
@@ -55,7 +83,9 @@ export default function SectionBuilder(props: IProps) {
       <Button
         className={className}
         onPress={() => {
+          setSubmitError(null);
           setItem(null);
+          setSectionName('');
           setInfoLayers([]);
           overlayState.open();
         }}
@@ -79,7 +109,14 @@ export default function SectionBuilder(props: IProps) {
                 <section className="flex flex-1 flex-col gap-4">
                   <TextField>
                     <Label>模块名称</Label>
-                    <Input variant="secondary" />
+                    <Input
+                      value={sectionName}
+                      onChange={(e) => {
+                        setSubmitError(null);
+                        setSectionName(e.target.value);
+                      }}
+                      variant="secondary"
+                    />
                   </TextField>
                   <section>
                     <div className="flex justify-between">
@@ -87,7 +124,10 @@ export default function SectionBuilder(props: IProps) {
                       <InfoLayerModal
                         onOk={(type) => {
                           setInfoLayers((prev) =>
-                            normalizeOrders([...prev, createInfoLayerRow(type)]),
+                            normalizeOrders([
+                              ...prev,
+                              createInfoLayerRow(type),
+                            ]),
                           );
                         }}
                       />
@@ -98,20 +138,86 @@ export default function SectionBuilder(props: IProps) {
                     >
                       <InfoLayerFieldList
                         layers={infoLayers}
-                        onLayersChange={setInfoLayers}
+                        onLayersChange={(next) => {
+                          setSubmitError(null);
+                          setInfoLayers(next);
+                        }}
                       />
                     </Surface>
                   </section>
                 </section>
                 <Separator className="mx-2" orientation="vertical" />
-                <section className="flex-1"></section>
+                <section className="flex-1">
+                  <Label>预览</Label>
+
+                  <Surface
+                    variant="secondary"
+                    className="flex min-h-0 flex-col rounded-2xl p-4"
+                  >
+                    <div className="rounded-xl bg-white p-6">
+                      <SectionRender
+                        contentTemplate={{
+                          name: sectionName,
+                          infoTemplates: infoLayers,
+                        }}
+                        status="view"
+                        contents={[
+                          {
+                            infos: infoLayers.map((t) => ({
+                              type: t.type,
+                              values:
+                                INFO_LAYER_MAP[t.type as INFO_LAYER]
+                                  .defaultProps.values,
+                            })),
+                          },
+                        ]}
+                        onContentsChange={() => {}}
+                      />
+                    </div>
+                  </Surface>
+                </section>
               </div>
             </Modal.Body>
-            <Modal.Footer>
-              <Button variant="primary">{item ? '保存' : '创建'}</Button>
-              <Button slot="close" variant="secondary">
-                取消
-              </Button>
+            <Modal.Footer className="flex flex-col items-stretch gap-2">
+              {submitError ? (
+                <p className="text-danger text-sm">{submitError}</p>
+              ) : null}
+              <div className="flex justify-end gap-2">
+                <Button slot="close" variant="secondary">
+                  取消
+                </Button>
+                <Button
+                  variant="primary"
+                  isDisabled={createMutation.isPending}
+                  onPress={() => {
+                    if (item) {
+                      return;
+                    }
+                    const name = sectionName.trim();
+                    if (!name) {
+                      setSubmitError('请填写模块名称');
+                      return;
+                    }
+                    if (infoLayers.length === 0) {
+                      setSubmitError('请至少添加一个信息层');
+                      return;
+                    }
+                    const ordered = normalizeOrders(infoLayers);
+                    createMutation.mutate({
+                      name,
+                      infoTemplates: ordered.map(
+                        ({ type, names, order }) => ({
+                          type,
+                          names,
+                          order,
+                        }),
+                      ),
+                    });
+                  }}
+                >
+                  {item ? '保存' : '创建'}
+                </Button>
+              </div>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
