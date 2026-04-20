@@ -1,6 +1,6 @@
 'use client';
 
-import { create } from '@/apis/content-template';
+import { create, update } from '@/apis/content-template';
 import { TContentTemplateItem } from '@/types/api/section/list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -41,6 +41,15 @@ export default function SectionBuilder(props: IProps) {
   const [infoLayers, setInfoLayers] = useState<InfoLayerRow[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const resetAfterSuccess = () => {
+    void queryClient.invalidateQueries({ queryKey: ['section-list'] });
+    setSubmitError(null);
+    setItem(null);
+    setSectionName('');
+    setInfoLayers([]);
+    overlayState.close();
+  };
+
   const createMutation = useMutation({
     mutationFn: create,
     onSuccess: (res) => {
@@ -48,15 +57,24 @@ export default function SectionBuilder(props: IProps) {
         setSubmitError(res.message || '创建失败');
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: ['section-list'] });
-      setSubmitError(null);
-      setItem(null);
-      setSectionName('');
-      setInfoLayers([]);
-      overlayState.close();
+      resetAfterSuccess();
     },
     onError: (err) => {
       setSubmitError(err instanceof Error ? err.message : '创建失败');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: update,
+    onSuccess: (res) => {
+      if (res.code !== 0) {
+        setSubmitError(res.message || '保存失败');
+        return;
+      }
+      resetAfterSuccess();
+    },
+    onError: (err) => {
+      setSubmitError(err instanceof Error ? err.message : '保存失败');
     },
   });
 
@@ -188,11 +206,10 @@ export default function SectionBuilder(props: IProps) {
                 </Button>
                 <Button
                   variant="primary"
-                  isDisabled={createMutation.isPending}
+                  isDisabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   onPress={() => {
-                    if (item) {
-                      return;
-                    }
                     const name = sectionName.trim();
                     if (!name) {
                       setSubmitError('请填写模块名称');
@@ -203,15 +220,25 @@ export default function SectionBuilder(props: IProps) {
                       return;
                     }
                     const ordered = normalizeOrders(infoLayers);
+                    const infoTemplates = ordered.map(
+                      ({ type, names, order }) => ({
+                        type,
+                        names,
+                        order,
+                      }),
+                    );
+                    if (item) {
+                      updateMutation.mutate({
+                        id: item.id,
+                        name,
+                        type: item.type ?? '',
+                        infoTemplates,
+                      });
+                      return;
+                    }
                     createMutation.mutate({
                       name,
-                      infoTemplates: ordered.map(
-                        ({ type, names, order }) => ({
-                          type,
-                          names,
-                          order,
-                        }),
-                      ),
+                      infoTemplates,
                     });
                   }}
                 >
