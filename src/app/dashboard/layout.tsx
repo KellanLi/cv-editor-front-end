@@ -54,10 +54,10 @@ export default function DashBoardLayout(props: IProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <UserStoreProvider>
-        <div className="flex h-lvh">
+        <div className="flex h-lvh min-h-0 overflow-hidden">
           <SideBar navItems={navItems} activeKey={activeKey} />
-          <Separator orientation="vertical" />
-          <main className="flex-1 px-4">
+          <Separator orientation="vertical" className="shrink-0" />
+          <main className="min-h-0 flex-1 overflow-y-auto px-4">
             <ContentHeader activeKey={activeKey} />
             <section>{children}</section>
           </main>
