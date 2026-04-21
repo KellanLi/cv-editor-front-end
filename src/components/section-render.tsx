@@ -1,9 +1,10 @@
 'use client';
 
 import { INFO_LAYER, INFO_LAYER_MAP } from '@/components/info-layer/const';
-import { TContent } from '@/types/business/content';
-import { TContentTemplate } from '@/types/business/content-template';
-import { TInfoTemplate } from '@/types/business/info-template';
+import type { TContent } from '@/types/business/content';
+import type { TInfo } from '@/types/business/info';
+import type { TContentTemplate } from '@/types/business/content-template';
+import type { TInfoTemplate } from '@/types/business/info-template';
 import { Button } from '@heroui/react';
 import { Plus } from 'lucide-react';
 import { useCallback, useMemo, useState, type MouseEvent } from 'react';
@@ -34,12 +35,22 @@ function defaultValuesForType(type: string): string[] {
   return [...(meta.defaultProps.values as string[])];
 }
 
-function createContentFromTemplates(templates: TInfoTemplateRow[]): TContent {
+function createContentFromTemplates(
+  templates: TInfoTemplateRow[],
+  contentOrder: number,
+): TContent {
+  const infos: TInfo[] = templates.map((t, layerIndex) => ({
+    id: 0,
+    contentId: 0,
+    order: layerIndex,
+    type: t.type,
+    values: defaultValuesForType(t.type),
+  }));
   return {
-    infos: templates.map((t) => ({
-      type: t.type,
-      values: defaultValuesForType(t.type),
-    })),
+    id: 0,
+    sectionId: 0,
+    order: contentOrder,
+    infos,
   };
 }
 
@@ -62,7 +73,7 @@ function getInfoAt(
   content: TContent,
   layerIndex: number,
   template: TInfoTemplateRow,
-) {
+): Pick<TInfo, 'type' | 'values'> {
   const fallback = {
     type: template.type,
     values: defaultValuesForType(template.type),
@@ -94,7 +105,10 @@ export default function SectionRender(props: IProps) {
 
   const handleAddContent = useCallback(() => {
     if (!templates.length) return;
-    onContentsChange([...contents, createContentFromTemplates(templates)]);
+    onContentsChange([
+      ...contents,
+      createContentFromTemplates(templates, contents.length),
+    ]);
     setActive(null);
   }, [contents, onContentsChange, templates]);
 
@@ -103,12 +117,18 @@ export default function SectionRender(props: IProps) {
       onContentsChange(
         contents.map((c, ci) => {
           if (ci !== contentIndex) return c;
-          const nextInfos = templates.map((t, li) => {
+          const nextInfos: TInfo[] = templates.map((t, li) => {
             const prev = c.infos[li];
-            const base =
+            const base: TInfo =
               prev && prev.type === t.type
                 ? prev
-                : { type: t.type, values: defaultValuesForType(t.type) };
+                : {
+                    id: 0,
+                    contentId: 0,
+                    order: li,
+                    type: t.type,
+                    values: defaultValuesForType(t.type),
+                  };
             if (li === layerIndex) return { ...base, values };
             return base;
           });

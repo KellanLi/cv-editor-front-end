@@ -2,7 +2,7 @@
 
 import { remove } from '@/apis/content-template';
 import SectionRender from '@/components/section-render';
-import type { TContentTemplateItem } from '@/types/api/section/list';
+import type { TContentTemplate } from '@/types/business/content-template';
 import { Button, Card, Modal, Popover, useOverlayState } from '@heroui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { EllipsisVertical, Pencil, Trash2 } from 'lucide-react';
@@ -15,8 +15,8 @@ const createdAtFormatter = new Intl.DateTimeFormat('zh-CN', {
 });
 
 interface IProps {
-  item: TContentTemplateItem;
-  onEdit: (item: TContentTemplateItem) => void;
+  item: TContentTemplate;
+  onEdit: (item: TContentTemplate) => void;
 }
 
 export default function SectionTemplateCard(props: IProps) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { list } from '@/apis/section';
+import { list } from '@/apis/content-template';
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import SectionBuilder, {
   type SectionBuilderHandle,

@@ -13,7 +13,7 @@ description: >-
 
 - **只做 HTTP 调用**：每个文件对应一类后端资源（或紧密相关的一组路径），导出若干命名函数。
 - **不写业务逻辑**：参数校验、状态更新、UI 由调用方处理。
-- **类型外置**：请求体、响应 `data` 的形状放在 `src/types/api/`，跨模块复用的领域模型用 `src/types/business/`（与现有 `TUser`、`TToken` 等一致）。
+- **类型外置**：请求体、分页等与接口契约相关的类型放在 `src/types/api/`；**实体与领域结构**（用户、简历、模块、信息层、内容模版等）放在 `src/types/business/`，由 `types/api` 的 `Req` / `Res` **引用** business 类型，避免重复声明。
 
 ## 请求层
 
@@ -47,22 +47,30 @@ export function userDetail() {
 - **避免保留字**：删除类接口若路径为 `delete`，函数名用 `remove`，并用一行 JSDoc 说明原因（见 `content-template.ts`）。
 - **聚合导出**（可选）：若存在 `section.ts` 这类 barrel，仅做 `export { ... } from './xxx'`，不混入实现。
 
-## 类型文件（`src/types/api/`）
+## 类型文件
+
+### `src/types/business/`（领域实体）
+
+- 存放 **`TUser`、`TResume`、`TSection`、`TContentTemplate`、`TInfoTemplate`** 等与产品概念一致的结构。
+- **前端类型名不使用后端后缀**：禁止 `*Dto` 等与 OpenAPI 机械对应的命名；用领域含义命名即可。
+- 接口返回的嵌套结构（如模块下的 `contents` / `infos`）若多处复用，也放在 business 或拆成贴近业务的命名，由 `types/api` 引用。
+
+### `src/types/api/`（按资源的请求/响应契约）
 
 - 按资源分子目录：`types/api/content-template/list.ts`。
 - 命名前缀 **`T`**：`TContentTemplateListReq`、`TContentTemplateListRes`。
-- 列表类响应常拆 `Req` / `Res`，DTO 单文件 `dto.ts`；与 OpenAPI 对齐时在类型旁用简短注释标一下（见 `list.ts` 中 pagination 注释）。
-- 认证等响应可组合 `types/business` 中的类型，避免在 `apis` 里重复声明结构。
+- 列表类响应常拆 `Req` / `Res`；**列表项、单条详情等实体类型从 `@/types/business/...` 引入**，例如 `TContentTemplateListRes` 的 `list` 为 `TContentTemplate[]`（见 `list.ts`）。
+- 认证等响应可组合 `types/business` 中的类型，避免在 `apis` 或 `types/api` 里重复声明同一实体。
 
 ## 风格细节（与现有示例对齐）
 
 - import 路径使用 `@/`，字符串引号与邻近文件一致（本项目以单引号为主）。
 - 函数体可直接 `return post(...)`，不必额外包一层 `async/await`，除非需要在此层做 `try/catch` 或顺序组合多个请求。
-- 新增接口时：**先补或对齐 `types/api`（及必要时 `business`）**，再写 `apis` 中的薄封装。
+- 新增接口时：**先对齐 `types/business` 与 `types/api`（Req/Res）**，再写 `apis` 中的薄封装。
 
 ## 自检清单
 
 - [ ] 路径与后端路由一致，且带前导 `/`。
 - [ ] `post`/`get` 泛型 `T` 对应的是 **`data` 内层类型**，不是整包 `BaseResponse`。
-- [ ] 未在 `apis` 内写死魔法字符串以外的重复类型；复杂结构已进 `types/api`。
+- [ ] 未在 `types/api` 用 `*Dto` 重复定义已在 business 中的实体；复杂领域结构在 `business`。
 - [ ] 未使用 `delete` 等保留字作为导出名（必要时 `remove` + 注释）。

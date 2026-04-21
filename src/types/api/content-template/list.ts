@@ -1,4 +1,4 @@
-import type { TContentTemplateDto } from './dto';
+import type { TContentTemplate } from '@/types/business/content-template';
 import type { IPagination } from '../pagination';
 
 export type TContentTemplateListFilter = {
@@ -10,14 +10,7 @@ export type TContentTemplateListReq = {
   pagination: IPagination;
 };
 
-/** 与 OpenAPI `ListDataDto.pagination` / `PaginationDto` 一致 */
-export type TContentTemplateListPaginationRes = {
-  page: number;
-  pageSize: number;
-  total: number;
-};
-
 export type TContentTemplateListRes = {
-  list: TContentTemplateDto[];
-  pagination: TContentTemplateListPaginationRes;
+  list: TContentTemplate[];
+  pagination: IPagination;
 };

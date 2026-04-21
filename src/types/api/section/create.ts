@@ -1,1 +1,4 @@
-export type { TContentTemplateCreateReq as TCreate } from '@/types/api/content-template/create';
+export type TSectionCreateReq = {
+  resumeId: number;
+  contentTemplateId: number;
+};

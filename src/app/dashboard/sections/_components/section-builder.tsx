@@ -1,7 +1,7 @@
 'use client';
 
 import { create, update } from '@/apis/content-template';
-import { TContentTemplateItem } from '@/types/api/section/list';
+import type { TContentTemplate } from '@/types/business/content-template';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -26,7 +26,7 @@ import SectionRender from '@/components/section-render';
 import { INFO_LAYER, INFO_LAYER_MAP } from '@/components/info-layer/const';
 
 export type SectionBuilderHandle = {
-  open: (next: TContentTemplateItem | null) => void;
+  open: (next: TContentTemplate | null) => void;
 };
 
 interface IProps {
@@ -38,7 +38,7 @@ export default function SectionBuilder(props: IProps) {
   const { ref, className } = props;
   const queryClient = useQueryClient();
   const overlayState = useOverlayState();
-  const [item, setItem] = useState<TContentTemplateItem | null>(null);
+  const [item, setItem] = useState<TContentTemplate | null>(null);
   const [sectionName, setSectionName] = useState('');
   const [infoLayers, setInfoLayers] = useState<InfoLayerRow[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -82,12 +82,12 @@ export default function SectionBuilder(props: IProps) {
 
   useImperativeHandle(ref, () => {
     return {
-      open: (next: TContentTemplateItem | null) => {
+      open: (next: TContentTemplate | null) => {
         setSubmitError(null);
         setItem(next);
         setSectionName(next?.name || '');
         setInfoLayers(
-          next?.infoTemplates?.map((t, i) => ({
+          next?.infoTemplates.map((t, i) => ({
             ...t,
             keyId: crypto.randomUUID(),
             order: i,
@@ -146,7 +146,6 @@ export default function SectionBuilder(props: IProps) {
                     updateMutation.mutate({
                       id: item.id,
                       name,
-                      type: item.type ?? '',
                       infoTemplates,
                     });
                     return;

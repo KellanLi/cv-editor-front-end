@@ -1,8 +1,7 @@
-import type { TInfoTemplate } from '@/types/business/info-template';
+import type { TContentTemplateInfoLayerInput } from './create';
 
 export type TContentTemplateUpdateReq = {
   id: number;
   name: string;
-  type: string;
-  infoTemplates: TInfoTemplate[];
+  infoTemplates: TContentTemplateInfoLayerInput[];
 };

@@ -1,12 +1,8 @@
-import { TToken } from '../../business/token';
-import { TUser } from '../../business/user';
+import type { TLoginData } from '@/types/business/login-data';
 
 export type TLogin = {
   email: string;
   password: string;
 };
 
-export type TLoginRes = {
-  user: TUser;
-  token: TToken;
-};
+export type TLoginRes = TLoginData;

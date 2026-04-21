@@ -27,8 +27,8 @@ alwaysApply: true
 | -------- | ---------------------- |
 | 简历     | Resume                 |
 | 模块     | Section                |
-| 模块内容 | Section Context / Context |
-| 模块模版 | Section Template       |
+| 模块内容 | Section Content / Content |
+| 模块模版 | Content Template       |
 | 信息层   | Info Layer             |
 
 ## 模块与信息层

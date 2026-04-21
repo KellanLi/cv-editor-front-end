@@ -1,7 +1,7 @@
 import { post } from '@/lib/request';
 import type { TContentTemplateCreateReq } from '@/types/api/content-template/create';
 import type { TContentTemplateDeleteReq } from '@/types/api/content-template/delete';
-import type { TContentTemplateDto } from '@/types/api/content-template/dto';
+import type { TContentTemplate } from '@/types/business/content-template';
 import type {
   TContentTemplateListReq,
   TContentTemplateListRes,
@@ -13,14 +13,14 @@ export function list(params: TContentTemplateListReq) {
 }
 
 export function create(params: TContentTemplateCreateReq) {
-  return post<TContentTemplateDto>('/content-template/create', params);
+  return post<TContentTemplate>('/content-template/create', params);
 }
 
 export function update(params: TContentTemplateUpdateReq) {
-  return post<TContentTemplateDto>('/content-template/update', params);
+  return post<TContentTemplate>('/content-template/update', params);
 }
 
 /** 删除模块（`delete` 为保留字，故用 `remove`） */
 export function remove(params: TContentTemplateDeleteReq) {
-  return post<TContentTemplateDto>('/content-template/delete', params);
+  return post<TContentTemplate>('/content-template/delete', params);
 }
