@@ -220,7 +220,7 @@ export default function SectionBuilder(props: IProps) {
                       </section>
                     </TextField>
                   </section>
-                <Separator className="mx-2" orientation="vertical" />
+                  <Separator className="mx-2" orientation="vertical" />
                   <section className="flex-1">
                     <Label>预览</Label>
 
@@ -237,7 +237,13 @@ export default function SectionBuilder(props: IProps) {
                           status="view"
                           contents={[
                             {
-                              infos: infoLayers.map((t) => ({
+                              id: 0,
+                              sectionId: 0,
+                              order: 0,
+                              infos: infoLayers.map((t, idx) => ({
+                                id: 0,
+                                contentId: 0,
+                                order: idx + 1,
                                 type: t.type,
                                 values:
                                   INFO_LAYER_MAP[t.type as INFO_LAYER]
