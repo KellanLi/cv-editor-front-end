@@ -8,8 +8,10 @@ export async function request<T = unknown>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = storage.getToken();
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers ?? {}),
     ...(token ? { Authorization: `Bearer ${token.value}` } : {}),
   };

@@ -1,3 +1,4 @@
+import type { TResumeProfile } from './resume-profile';
 import type { TSection } from './section';
 
 /** 与接口文档 `ResumeDto` 字段一致 */
@@ -7,5 +8,6 @@ export type TResume = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  profile?: TResumeProfile;
   sections: TSection[];
 };
