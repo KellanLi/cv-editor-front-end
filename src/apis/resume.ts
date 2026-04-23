@@ -1,6 +1,7 @@
 import { post } from '@/lib/request';
 import type { TResumeCreateReq } from '@/types/api/resume/create';
 import type { TResumeDeleteReq } from '@/types/api/resume/delete';
+import type { TResumeDetailReq } from '@/types/api/resume/detail';
 import type { TResumeListReq, TResumeListRes } from '@/types/api/resume/list';
 import type { TResumeUpdateProfileReq } from '@/types/api/resume/update-profile';
 import type { TResumeUpdateTitleReq } from '@/types/api/resume/update-title';
@@ -8,6 +9,10 @@ import type { TResume } from '@/types/business/resume';
 
 export function list(params: TResumeListReq) {
   return post<TResumeListRes>('/resume/list', params);
+}
+
+export function detail(params: TResumeDetailReq) {
+  return post<TResume>('/resume/detail', params);
 }
 
 export function create(params: TResumeCreateReq) {
