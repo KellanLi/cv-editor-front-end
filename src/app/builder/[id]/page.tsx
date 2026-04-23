@@ -123,7 +123,10 @@ export default function BuilderPage() {
               className="bg-background shrink-0"
               style={{ width: rightWidth }}
             >
-              <RightPanel />
+              <RightPanel
+                resumeId={resumeId}
+                sections={resume?.sections ?? []}
+              />
             </aside>
           </>
         ) : null}

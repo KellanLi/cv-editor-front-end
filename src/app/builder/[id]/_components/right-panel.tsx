@@ -1,7 +1,13 @@
 'use client';
 
-import { Button, Tabs } from '@heroui/react';
-import { Plus } from 'lucide-react';
+import { list as listContentTemplates } from '@/apis/content-template';
+import type { TContentTemplate } from '@/types/business/content-template';
+import type { TSection } from '@/types/business/section';
+import { Tabs } from '@heroui/react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import AddSectionModal from './add-section-modal';
+import SectionList from './section-list';
 
 const TAB_KEYS = {
   SECTIONS: 'sections',
@@ -9,7 +15,40 @@ const TAB_KEYS = {
   DIAGNOSIS: 'diagnosis',
 } as const;
 
-export default function RightPanel() {
+/** 一次性拉取一页较大的 Content Template，足够覆盖常规用户数量，用于 id → name 查找 */
+const CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE = 200;
+
+interface IProps {
+  resumeId: number | null;
+  sections: TSection[];
+}
+
+export default function RightPanel(props: IProps) {
+  const { resumeId, sections } = props;
+
+  const { data: contentTemplateData } = useQuery({
+    queryKey: ['content-template-lookup'],
+    queryFn: async () => {
+      const res = await listContentTemplates({
+        filter: { name: '' },
+        pagination: { page: 1, pageSize: CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE },
+      });
+      if (res.code !== 0) {
+        throw new Error(res.message || '加载失败');
+      }
+      return res.data;
+    },
+    enabled: resumeId != null,
+  });
+
+  const contentTemplateMap = useMemo(() => {
+    const map = new Map<number, TContentTemplate>();
+    for (const t of contentTemplateData?.list ?? []) {
+      map.set(t.id, t);
+    }
+    return map;
+  }, [contentTemplateData?.list]);
+
   return (
     <Tabs
       defaultSelectedKey={TAB_KEYS.SECTIONS}
@@ -36,13 +75,23 @@ export default function RightPanel() {
         id={TAB_KEYS.SECTIONS}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4"
       >
-        <Button variant="secondary" className="w-full justify-center gap-2">
-          <Plus className="size-4" aria-hidden />
-          添加模块
-        </Button>
-        <div className="text-muted border-default-200 rounded-xl border border-dashed p-6 text-center text-sm">
-          暂无模块
-        </div>
+        {resumeId != null ? (
+          <>
+            <AddSectionModal
+              resumeId={resumeId}
+              className="w-full justify-center gap-2"
+            />
+            <SectionList
+              resumeId={resumeId}
+              sections={sections}
+              contentTemplateMap={contentTemplateMap}
+            />
+          </>
+        ) : (
+          <div className="border-default-200 rounded-xl border border-dashed p-6 text-center">
+            <p className="text-muted text-sm">请先加载简历</p>
+          </div>
+        )}
       </Tabs.Panel>
 
       <Tabs.Panel
