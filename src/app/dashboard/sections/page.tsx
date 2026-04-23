@@ -83,7 +83,7 @@ export default function SectionsPage() {
         >
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input placeholder="模版名称" />
+            <SearchField.Input placeholder="模块名称" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
@@ -95,14 +95,16 @@ export default function SectionsPage() {
           <Spinner size="lg" />
         </div>
       ) : isError ? (
-        <EmptyState className="min-h-48 rounded-2xl border border-dashed border-default-300">
+        <EmptyState className="border-default-300 min-h-48 rounded-2xl border border-dashed">
           <p className="text-danger text-sm">
             {error instanceof Error ? error.message : '加载失败'}
           </p>
         </EmptyState>
       ) : listItems.length === 0 ? (
-        <EmptyState className="min-h-48 rounded-2xl border border-dashed border-default-300">
-          <p className="text-muted text-sm">暂无模块模版，点击右上角「创建」开始添加。</p>
+        <EmptyState className="border-default-300 min-h-48 rounded-2xl border border-dashed">
+          <p className="text-muted text-sm">
+            暂无模块模版，点击右上角「创建」开始添加。
+          </p>
         </EmptyState>
       ) : (
         <>
