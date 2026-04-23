@@ -1,5 +1,8 @@
 'use client';
 
+import { detail } from '@/apis/resume';
+import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import BuilderTopBar, { type TSaveStatus } from './_components/builder-top-bar';
 import CenterPanel from './_components/center-panel';
@@ -15,18 +18,54 @@ const RIGHT_MIN = 280;
 const RIGHT_MAX = 520;
 const RIGHT_DEFAULT = 320;
 
+function parseResumeIdParam(raw: string | string[] | undefined): number | null {
+  if (raw === undefined) return null;
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  const n = Number(s);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 export default function BuilderPage() {
+  const params = useParams<{ id: string }>();
+  const resumeId = parseResumeIdParam(params.id);
+
+  const {
+    data: resume,
+    isPending,
+    isError,
+    error: resumeError,
+  } = useQuery({
+    queryKey: ['resume', resumeId] as const,
+    queryFn: async () => {
+      const res = await detail({ id: resumeId! });
+      if (res.code !== 0) {
+        throw new Error(res.message || '加载失败');
+      }
+      return res.data;
+    },
+    enabled: resumeId != null,
+  });
+
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
   const [rightWidth, setRightWidth] = useState(RIGHT_DEFAULT);
-  const [title] = useState('未命名简历');
   const [status] = useState<TSaveStatus>('saved');
+
+  const titleState =
+    resumeId == null
+      ? ('error' as const)
+      : isPending
+        ? ('loading' as const)
+        : isError
+          ? ('error' as const)
+          : ('ready' as const);
 
   return (
     <div className="bg-background flex h-lvh min-h-0 flex-col overflow-hidden">
       <BuilderTopBar
-        title={title}
+        title={resume?.title ?? ''}
+        titleState={titleState}
         status={status}
         leftPanelOpen={leftOpen}
         rightPanelOpen={rightOpen}
@@ -61,7 +100,13 @@ export default function BuilderPage() {
         ) : null}
 
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl bg-white">
-          <CenterPanel />
+          <CenterPanel
+            resumeId={resumeId}
+            resume={resume}
+            isPending={isPending}
+            isError={isError}
+            error={resumeError instanceof Error ? resumeError : null}
+          />
         </main>
 
         {rightOpen ? (

@@ -14,6 +14,9 @@ import { useRouter } from 'next/navigation';
 
 export type TSaveStatus = 'saving' | 'saved';
 
+/** 简历名称区域：与 resume detail 拉取状态对应 */
+export type TTitleState = 'loading' | 'error' | 'ready';
+
 /** 小型装饰性竖线；不使用 `Separator`，避免 `align-self: stretch` 把高度撑满父容器 */
 function InlineDivider() {
   return (
@@ -26,6 +29,8 @@ function InlineDivider() {
 
 interface IProps {
   title: string;
+  /** 默认 `ready`；`loading` / `error` 时顶栏内自行展示占位与错误文案 */
+  titleState?: TTitleState;
   status: TSaveStatus;
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
@@ -56,6 +61,7 @@ function StatusBadge({ status }: { status: TSaveStatus }) {
 export default function BuilderTopBar(props: IProps) {
   const {
     title,
+    titleState = 'ready',
     status,
     leftPanelOpen,
     rightPanelOpen,
@@ -86,11 +92,23 @@ export default function BuilderTopBar(props: IProps) {
 
       <InlineDivider />
 
-      <h1 className="text-foreground max-w-[22rem] truncate text-sm font-semibold">
-        {title.trim() || '未命名简历'}
-      </h1>
+      {titleState === 'loading' ? (
+        <span
+          className="bg-default-200 h-4 w-[11rem] max-w-[22rem] shrink animate-pulse rounded"
+          role="status"
+          aria-label="正在加载简历名称"
+        />
+      ) : titleState === 'error' ? (
+        <h1 className="text-default-400 max-w-[22rem] shrink truncate text-sm font-semibold">
+          无法加载简历
+        </h1>
+      ) : (
+        <h1 className="text-foreground max-w-[22rem] shrink truncate text-sm font-semibold">
+          {title.trim() || '未命名简历'}
+        </h1>
+      )}
 
-      <StatusBadge status={status} />
+      {titleState === 'ready' ? <StatusBadge status={status} /> : null}
 
       <div className="ml-auto flex items-center gap-1">
         <Tooltip delay={300}>
