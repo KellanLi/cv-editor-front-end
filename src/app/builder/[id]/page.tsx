@@ -7,12 +7,15 @@ import {
   resumeQueryKey,
   resumeSectionsQueryKey,
 } from '@/lib/builder-resume-keys';
+import { ResumeSnapshotProvider } from '@/lib/resume-snapshot-context';
 import type { TContentTemplate } from '@/types/business/content-template';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import BuilderTopBar, { type TSaveStatus } from './_components/builder-top-bar';
 import CenterPanel from './_components/center-panel';
+import { ResumeCoverCapture } from './_components/resume-cover-capture';
+import ResumeCoverPreviewDebug from './_components/resume-cover-preview-debug';
 import LeftPanel from './_components/left-panel';
 import ResizeHandle from './_components/resize-handle';
 import RightPanel from './_components/right-panel';
@@ -109,6 +112,7 @@ export default function BuilderPage() {
   const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
   const [rightWidth, setRightWidth] = useState(RIGHT_DEFAULT);
   const [status] = useState<TSaveStatus>('saved');
+  const captureRootRef = useRef<HTMLDivElement>(null);
 
   const titleState =
     resumeId == null
@@ -119,7 +123,17 @@ export default function BuilderPage() {
           ? ('error' as const)
           : ('ready' as const);
 
+  const coverCaptureReady = Boolean(
+    resumeId != null &&
+      !isPending &&
+      !isError &&
+      resume != null &&
+      !isSectionsPending &&
+      !isSectionsError,
+  );
+
   return (
+    <ResumeSnapshotProvider>
     <div className="bg-background flex h-lvh min-h-0 flex-col overflow-hidden">
       <BuilderTopBar
         title={resume?.title ?? ''}
@@ -135,6 +149,12 @@ export default function BuilderPage() {
         onSave={() => {
           // TODO: 手动保存
         }}
+        beforeExportExtra={
+          <ResumeCoverPreviewDebug
+            captureRootRef={captureRootRef}
+            ready={coverCaptureReady}
+          />
+        }
       />
 
       <div className="flex min-h-0 flex-1">
@@ -159,6 +179,7 @@ export default function BuilderPage() {
 
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl bg-white">
           <CenterPanel
+            ref={captureRootRef}
             resumeId={resumeId}
             resume={resume}
             isPending={isPending}
@@ -208,6 +229,14 @@ export default function BuilderPage() {
           </>
         ) : null}
       </div>
+      <ResumeCoverCapture
+        captureRootRef={captureRootRef}
+        resumeId={resumeId}
+        resume={resume}
+        sections={sectionsList}
+        ready={coverCaptureReady}
+      />
     </div>
+    </ResumeSnapshotProvider>
   );
 }

@@ -11,9 +11,11 @@ import type { TContent } from '@/types/business/content';
 import type { TContentTemplate } from '@/types/business/content-template';
 import type { TSection } from '@/types/business/section';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRegisterResumeSnapshotExit } from '@/lib/resume-snapshot-context';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -117,7 +119,16 @@ export default function CustomSectionModule(props: IProps) {
     }
   }, [draftContents, queryClient, section.id, sectionsKey, updateMutation]);
 
-  completeEditRef.current = completeEdit;
+  useLayoutEffect(() => {
+    completeEditRef.current = completeEdit;
+  }, [completeEdit]);
+
+  const exitToViewForSnapshot = useCallback(async () => {
+    if (moduleStatus === 'view') return;
+    await completeEdit();
+  }, [completeEdit, moduleStatus]);
+
+  useRegisterResumeSnapshotExit(`section-${section.id}`, exitToViewForSnapshot);
 
   useEffect(() => {
     if (moduleStatus !== 'edit') return;

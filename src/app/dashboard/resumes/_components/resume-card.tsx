@@ -80,12 +80,21 @@ export default function ResumeCard(props: IProps) {
           }
         }}
       >
-        <div className="bg-default-50 flex min-h-[140px] flex-1 items-center justify-center rounded-t-[calc(1.5rem-5px)]">
-          <FileText
-            className="text-default-300 size-14"
-            strokeWidth={1.2}
-            aria-hidden
-          />
+        <div className="bg-default-50 relative flex min-h-[140px] flex-1 items-center justify-center overflow-hidden rounded-t-[calc(1.5rem-5px)]">
+          {item.listCoverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.listCoverImageUrl}
+              alt=""
+              className="h-full w-full object-cover object-top"
+            />
+          ) : (
+            <FileText
+              className="text-default-300 size-14"
+              strokeWidth={1.2}
+              aria-hidden
+            />
+          )}
         </div>
 
         <Card.Footer className="mt-auto flex min-h-[4.5rem] flex-row items-center gap-2 px-4">

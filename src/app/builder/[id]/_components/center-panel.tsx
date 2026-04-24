@@ -4,6 +4,7 @@ import type { TContentTemplate } from '@/types/business/content-template';
 import type { TResume } from '@/types/business/resume';
 import type { TSection } from '@/types/business/section';
 import { EmptyState, Spinner } from '@heroui/react';
+import { forwardRef } from 'react';
 import CustomSectionModule from './custom-section-module';
 import ProfileModule from './profile-module';
 
@@ -21,7 +22,10 @@ interface IProps {
   contentTemplateMap: Map<number, TContentTemplate>;
 }
 
-export default function CenterPanel(props: IProps) {
+const CenterPanel = forwardRef<HTMLDivElement, IProps>(function CenterPanel(
+  props,
+  ref,
+) {
   const {
     resumeId,
     resume,
@@ -36,7 +40,11 @@ export default function CenterPanel(props: IProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto py-8">
-      <div className="flex w-full min-h-[1120px] shrink-0 max-w-[820px] flex-col rounded-lg bg-white p-10 shadow-sm">
+      <div
+        ref={ref}
+        data-resume-capture-root
+        className="flex w-full min-h-[1120px] shrink-0 max-w-[820px] flex-col rounded-lg bg-white p-10 shadow-sm"
+      >
         {resumeId == null ? (
           <EmptyState className="border-default-300 min-h-48 rounded-2xl border border-dashed">
             <p className="text-muted text-center text-sm">
@@ -86,4 +94,6 @@ export default function CenterPanel(props: IProps) {
       </div>
     </div>
   );
-}
+});
+
+export default CenterPanel;

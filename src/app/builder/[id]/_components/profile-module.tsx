@@ -2,6 +2,7 @@
 
 import { updateProfile } from '@/apis/resume';
 import { resumeQueryKey } from '@/lib/builder-resume-keys';
+import { useRegisterResumeSnapshotExit } from '@/lib/resume-snapshot-context';
 import { upload } from '@/apis/storage';
 import type { TResumeUpdateProfileReq } from '@/types/api/resume/update-profile';
 import type { TResumeProfile } from '@/types/business/resume-profile';
@@ -35,6 +36,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -335,7 +337,17 @@ export default function ProfileModule(props: IProfileModuleProps) {
     }
   }, [draft, resumeId, updateMutation]);
 
-  completeEditRef.current = completeEdit;
+  useLayoutEffect(() => {
+    completeEditRef.current = completeEdit;
+  }, [completeEdit]);
+
+  const exitToViewForSnapshot = useCallback(async () => {
+    if (photoDialog.isOpen) closePhotoDialog();
+    if (moduleStatus === 'view') return;
+    await completeEdit();
+  }, [closePhotoDialog, completeEdit, moduleStatus, photoDialog.isOpen]);
+
+  useRegisterResumeSnapshotExit('profile', exitToViewForSnapshot);
 
   useEffect(() => {
     if (moduleStatus !== 'edit') return;

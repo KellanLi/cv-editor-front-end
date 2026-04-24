@@ -21,13 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  Button,
-  FieldError,
-  Input,
-  Label,
-  TextField,
-} from '@heroui/react';
+import { Button, FieldError, Input, Label, TextField } from '@heroui/react';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
@@ -80,7 +74,7 @@ function SortableLayerRow(props: SortableRowProps) {
     <li
       ref={setNodeRef}
       style={style}
-      className="flex flex-col gap-3 rounded-2xl border border-foreground/10 bg-surface/80 p-4 shadow-sm sm:flex-row sm:items-start sm:gap-4"
+      className="border-foreground/10 bg-surface/80 flex flex-col gap-3 rounded-2xl border p-4 shadow-sm sm:flex-row sm:items-start sm:gap-4"
       {...attributes}
     >
       <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-center sm:pt-1">
@@ -92,7 +86,7 @@ function SortableLayerRow(props: SortableRowProps) {
         >
           <GripVertical className="size-5" />
         </button>
-        <span className="text-muted tabular-nums text-sm font-medium">
+        <span className="text-muted text-sm font-medium tabular-nums">
           {index + 1}
         </span>
       </div>
@@ -114,19 +108,14 @@ function SortableLayerRow(props: SortableRowProps) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {row.names.map((name, fieldIndex) => {
-            const base =
-              labelSource[fieldIndex] ?? `字段 ${fieldIndex + 1}`;
+            const base = labelSource[fieldIndex] ?? `字段 ${fieldIndex + 1}`;
             return (
               <TextField
                 key={`${row.keyId}-field-${fieldIndex}`}
                 isRequired
                 value={name}
-                onChange={(next) =>
-                  onNameChange(row.keyId, fieldIndex, next)
-                }
-                validate={(value) =>
-                  !value?.trim() ? '请填写字段名称' : null
-                }
+                onChange={(next) => onNameChange(row.keyId, fieldIndex, next)}
+                validate={(value) => (!value?.trim() ? '请填写字段名称' : null)}
               >
                 <Label>
                   {base}
@@ -146,8 +135,8 @@ function SortableLayerRow(props: SortableRowProps) {
 function DragPreview({ row, index }: { row: InfoLayerRow; index: number }) {
   const title = layerTitle(row.type);
   return (
-    <div className="flex cursor-grabbing flex-col gap-3 rounded-2xl border border-accent/30 bg-surface p-4 shadow-lg ring-2 ring-accent/20 sm:flex-row sm:items-start sm:gap-4">
-      <span className="text-muted tabular-nums text-sm font-medium">
+    <div className="border-accent/30 bg-surface ring-accent/20 flex cursor-grabbing flex-col gap-3 rounded-2xl border p-4 shadow-lg ring-2 sm:flex-row sm:items-start sm:gap-4">
+      <span className="text-muted text-sm font-medium tabular-nums">
         {index + 1}
       </span>
       <span className="text-foreground text-sm font-semibold">{title}</span>
@@ -259,6 +248,8 @@ export default function InfoLayerFieldList(props: IProps) {
 export function createInfoLayerRow(type: INFO_LAYER): InfoLayerRow {
   const labels = INFO_LAYER_MAP[type].defaultProps.labels as string[];
   return {
+    id: 0,
+    contentTemplateId: 0,
     keyId: crypto.randomUUID(),
     type,
     names: labels.map(() => ''),

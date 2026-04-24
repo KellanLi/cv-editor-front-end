@@ -8,6 +8,8 @@ export type TResume = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  /** 列表/卡片等场景用封面；与 `ResumeDto.listCoverImageUrl` 一致 */
+  listCoverImageUrl?: string;
   profile?: TResumeProfile;
   /** `resume/detail` 可能不返回；请用 `section/list` 拉取后单独缓存 */
   sections?: TSection[];

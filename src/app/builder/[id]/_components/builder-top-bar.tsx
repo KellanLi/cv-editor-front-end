@@ -11,6 +11,7 @@ import {
   Save,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 export type TSaveStatus = 'saving' | 'saved';
 
@@ -39,6 +40,8 @@ interface IProps {
   onExport: () => void;
   onSave: () => void;
   isSaving?: boolean;
+  /** 插在「导出」按钮左侧，例如本页调试用 */
+  beforeExportExtra?: ReactNode;
 }
 
 function StatusBadge({ status }: { status: TSaveStatus }) {
@@ -70,6 +73,7 @@ export default function BuilderTopBar(props: IProps) {
     onExport,
     onSave,
     isSaving,
+    beforeExportExtra,
   } = props;
   const router = useRouter();
 
@@ -154,6 +158,13 @@ export default function BuilderTopBar(props: IProps) {
             <p>{rightPanelOpen ? '收起右侧面板' : '展开右侧面板'}</p>
           </Tooltip.Content>
         </Tooltip>
+
+        {beforeExportExtra ? (
+          <>
+            <InlineDivider />
+            {beforeExportExtra}
+          </>
+        ) : null}
 
         <InlineDivider />
 
