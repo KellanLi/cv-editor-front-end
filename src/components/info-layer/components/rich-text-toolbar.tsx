@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, type ComponentProps } from 'react';
 import type { Editor } from '@tiptap/react';
 import {
   Button,
+  BUTTON_GROUP_CHILD,
   ButtonGroup,
   Separator,
   ToggleButton,
@@ -20,6 +21,20 @@ import {
   RemoveFormatting,
   Undo2,
 } from 'lucide-react';
+
+/**
+ * `ButtonGroup` injects `__button_group_child` on direct children; `Button` strips
+ * it but `ButtonGroup.Separator` forwards it to a DOM `span` — strip it here.
+ * (HeroUI: `ButtonGroup` clones direct children and merges `[BUTTON_GROUP_CHILD]`.)
+ */
+type SafeButtonGroupSeparatorProps = ComponentProps<typeof ButtonGroup.Separator> & {
+  __button_group_child?: boolean;
+};
+
+function SafeButtonGroupSeparator(props: SafeButtonGroupSeparatorProps) {
+  const { [BUTTON_GROUP_CHILD]: _inGroup, ...rest } = props;
+  return <ButtonGroup.Separator {...rest} />;
+}
 
 function useEditorTransactionSync(editor: Editor | null) {
   const [, tick] = useReducer((n: number) => n + 1, 0);
@@ -56,7 +71,7 @@ export function RichTextToolbar({ editor }: { editor: Editor | null }) {
         >
           <Undo2 size={16} />
         </Button>
-        <ButtonGroup.Separator />
+        <SafeButtonGroupSeparator />
         <Button
           isIconOnly
           aria-label="重做"
@@ -128,7 +143,7 @@ export function RichTextToolbar({ editor }: { editor: Editor | null }) {
         >
           <IndentIncrease size={16} />
         </Button>
-        <ButtonGroup.Separator />
+        <SafeButtonGroupSeparator />
         <Button
           isIconOnly
           aria-label="减少段落缩进"
