@@ -1,7 +1,10 @@
 'use client';
 
+import type { TContentTemplate } from '@/types/business/content-template';
 import type { TResume } from '@/types/business/resume';
+import type { TSection } from '@/types/business/section';
 import { EmptyState, Spinner } from '@heroui/react';
+import CustomSectionModule from './custom-section-module';
 import ProfileModule from './profile-module';
 
 interface IProps {
@@ -10,14 +13,30 @@ interface IProps {
   isPending: boolean;
   isError: boolean;
   error: Error | null;
+  /** 与 `RightPanel` 共用同一份有序模块列表 */
+  sections: TSection[];
+  sectionsPending?: boolean;
+  sectionsError?: Error | null;
+  /** 父级统一查询的模版查找表，用于渲染 `SectionRender` 所需 `contentTemplate` */
+  contentTemplateMap: Map<number, TContentTemplate>;
 }
 
 export default function CenterPanel(props: IProps) {
-  const { resumeId, resume, isPending, isError, error } = props;
+  const {
+    resumeId,
+    resume,
+    isPending,
+    isError,
+    error,
+    sections,
+    sectionsPending,
+    sectionsError,
+    contentTemplateMap,
+  } = props;
 
   return (
     <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto py-8">
-      <div className="flex min-h-[1120px] w-full max-w-[820px] flex-col gap-6 rounded-lg bg-white p-10 shadow-sm">
+      <div className="flex min-h-[1120px] w-full max-w-[820px] flex-col gap-4 rounded-lg bg-white p-10 shadow-sm">
         {resumeId == null ? (
           <EmptyState className="border-default-300 min-h-48 rounded-2xl border border-dashed">
             <p className="text-muted text-center text-sm">
@@ -34,11 +53,35 @@ export default function CenterPanel(props: IProps) {
             {error?.message || '简历加载失败'}
           </p>
         ) : (
-          <ProfileModule
-            key={resumeId}
-            resumeId={resumeId}
-            profile={resume?.profile}
-          />
+          <>
+            <ProfileModule
+              key={resumeId}
+              resumeId={resumeId}
+              profile={resume?.profile}
+            />
+
+            {sectionsPending ? (
+              <div className="text-muted flex min-h-24 items-center justify-center gap-2 text-sm">
+                <Spinner size="md" />
+                加载模块…
+              </div>
+            ) : sectionsError ? (
+              <p className="text-danger text-sm" role="alert">
+                {sectionsError.message}
+              </p>
+            ) : (
+              sections.map((section) => (
+                <CustomSectionModule
+                  key={section.id}
+                  resumeId={resumeId}
+                  section={section}
+                  contentTemplate={contentTemplateMap.get(
+                    section.contentTemplateId,
+                  )}
+                />
+              ))
+            )}
+          </>
         )}
       </div>
     </div>

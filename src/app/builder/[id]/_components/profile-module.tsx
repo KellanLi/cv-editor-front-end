@@ -1,6 +1,7 @@
 'use client';
 
 import { updateProfile } from '@/apis/resume';
+import { resumeQueryKey } from '@/lib/builder-resume-keys';
 import { upload } from '@/apis/storage';
 import type { TResumeUpdateProfileReq } from '@/types/api/resume/update-profile';
 import type { TResumeProfile } from '@/types/business/resume-profile';
@@ -213,7 +214,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
   const fileId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const completeEditRef = useRef<() => Promise<void>>(() => Promise.resolve());
-  const queryKey = useMemo(() => ['resume', resumeId] as const, [resumeId]);
+  const queryKey = useMemo(() => resumeQueryKey(resumeId), [resumeId]);
 
   useEffect(() => {
     if (moduleStatus === 'view') {

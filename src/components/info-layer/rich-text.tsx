@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Label } from '@heroui/react';
+import { Label, TextField } from '@heroui/react';
+import { inputVariants } from '@heroui/styles';
 import InfoLayerHoc, { TFormFC, TShowFC } from './hoc';
 import { RichTextToolbar } from './components/rich-text-toolbar';
 import { ParagraphIndent } from './components/tiptap-paragraph-indent';
@@ -61,17 +62,20 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
   }, [editor, contentFromParent]);
 
   return (
-    <div>
+    <TextField fullWidth>
       <Label>{labels[0]}</Label>
-      <div className="mt-1 overflow-hidden rounded-lg border border-default-200 focus-within:ring-2 focus-within:ring-focus">
-        <div className="w-full min-w-0 border-b border-default-200">
+      <div
+        data-slot="input"
+        className={`${inputVariants({ fullWidth: true, variant: 'primary' })} flex min-h-0 !flex-col !p-0 overflow-hidden transition-[background-color,border-color,box-shadow] [transition-duration:150ms] [transition-timing-function:var(--ease-out)] motion-reduce:transition-none hover:not-focus-within:border-field-border-hover hover:not-focus-within:bg-field-hover focus-within:border-field-border-focus focus-within:bg-field-focus focus-within:status-focused-field`}
+      >
+        <div className="w-full min-w-0 border-b border-separator">
           <RichTextToolbar editor={editor} />
         </div>
         <div className="min-h-0 px-3 py-2">
           <EditorContent editor={editor} />
         </div>
       </div>
-    </div>
+    </TextField>
   );
 };
 

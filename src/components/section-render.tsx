@@ -182,6 +182,7 @@ export default function SectionRender(props: IProps) {
 
                 const boxClass = [
                   'rounded-xl border transition-[border-color,box-shadow,background-color]',
+                  status === 'edit' && isActive && 'p-3',
                   status === 'edit' &&
                     !isActive &&
                     'cursor-pointer border-transparent hover:border-default-300 hover:bg-default-100/70',
@@ -227,7 +228,7 @@ export default function SectionRender(props: IProps) {
       </div>
 
       {status === 'edit' ? (
-        <div className="border-foreground/10 shrink-0 border-t">
+        <div className="shrink-0 pt-6">
           <Button
             variant="secondary"
             className="inline-flex w-full items-center justify-center gap-2"

@@ -1,9 +1,16 @@
 'use client';
 
+import { list as listContentTemplates } from '@/apis/content-template';
 import { detail } from '@/apis/resume';
+import { list as sectionList } from '@/apis/section';
+import {
+  resumeQueryKey,
+  resumeSectionsQueryKey,
+} from '@/lib/builder-resume-keys';
+import type { TContentTemplate } from '@/types/business/content-template';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import BuilderTopBar, { type TSaveStatus } from './_components/builder-top-bar';
 import CenterPanel from './_components/center-panel';
 import LeftPanel from './_components/left-panel';
@@ -17,6 +24,12 @@ const LEFT_DEFAULT = 320;
 const RIGHT_MIN = 280;
 const RIGHT_MAX = 520;
 const RIGHT_DEFAULT = 320;
+
+/** 单简历模块数量通常远小于此值；分页拉满一页即可 */
+const SECTION_LIST_PAGE_SIZE = 500;
+
+/** 一次性拉取一页较大的 Content Template，用于中/右栏共用的 id → 模版查找 */
+const CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE = 200;
 
 function parseResumeIdParam(raw: string | string[] | undefined): number | null {
   if (raw === undefined) return null;
@@ -35,7 +48,7 @@ export default function BuilderPage() {
     isError,
     error: resumeError,
   } = useQuery({
-    queryKey: ['resume', resumeId] as const,
+    queryKey: resumeQueryKey(resumeId),
     queryFn: async () => {
       const res = await detail({ id: resumeId! });
       if (res.code !== 0) {
@@ -45,6 +58,51 @@ export default function BuilderPage() {
     },
     enabled: resumeId != null,
   });
+
+  const {
+    data: sections,
+    isPending: isSectionsPending,
+    isError: isSectionsError,
+    error: sectionsError,
+  } = useQuery({
+    queryKey: resumeSectionsQueryKey(resumeId),
+    queryFn: async () => {
+      const res = await sectionList({
+        filter: { resumeId: resumeId! },
+        pagination: { page: 1, pageSize: SECTION_LIST_PAGE_SIZE },
+      });
+      if (res.code !== 0) {
+        throw new Error(res.message || '模块列表加载失败');
+      }
+      return [...res.data.list].sort((a, b) => a.order - b.order);
+    },
+    enabled: resumeId != null,
+  });
+
+  const sectionsList = useMemo(() => sections ?? [], [sections]);
+
+  const { data: contentTemplateData } = useQuery({
+    queryKey: ['content-template-lookup'] as const,
+    queryFn: async () => {
+      const res = await listContentTemplates({
+        filter: { name: '' },
+        pagination: { page: 1, pageSize: CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE },
+      });
+      if (res.code !== 0) {
+        throw new Error(res.message || '模块模版加载失败');
+      }
+      return res.data;
+    },
+    enabled: resumeId != null,
+  });
+
+  const contentTemplateMap = useMemo(() => {
+    const map = new Map<number, TContentTemplate>();
+    for (const t of contentTemplateData?.list ?? []) {
+      map.set(t.id, t);
+    }
+    return map;
+  }, [contentTemplateData?.list]);
 
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -106,6 +164,16 @@ export default function BuilderPage() {
             isPending={isPending}
             isError={isError}
             error={resumeError instanceof Error ? resumeError : null}
+            sections={sectionsList}
+            sectionsPending={isSectionsPending}
+            sectionsError={
+              isSectionsError
+                ? sectionsError instanceof Error
+                  ? sectionsError
+                  : new Error('模块列表加载失败')
+                : null
+            }
+            contentTemplateMap={contentTemplateMap}
           />
         </main>
 
@@ -125,7 +193,16 @@ export default function BuilderPage() {
             >
               <RightPanel
                 resumeId={resumeId}
-                sections={resume?.sections ?? []}
+                sections={sectionsList}
+                sectionsPending={isSectionsPending}
+                sectionsError={
+                  isSectionsError
+                    ? sectionsError instanceof Error
+                      ? sectionsError
+                      : new Error('模块列表加载失败')
+                    : null
+                }
+                contentTemplateMap={contentTemplateMap}
               />
             </aside>
           </>

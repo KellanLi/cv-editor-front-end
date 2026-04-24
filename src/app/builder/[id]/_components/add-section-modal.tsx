@@ -2,7 +2,9 @@
 
 import { list as listContentTemplates } from '@/apis/content-template';
 import { create } from '@/apis/section';
+import { resumeSectionsQueryKey } from '@/lib/builder-resume-keys';
 import type { TContentTemplate } from '@/types/business/content-template';
+import type { TSection } from '@/types/business/section';
 import {
   Button,
   EmptyState,
@@ -45,12 +47,16 @@ function getVisiblePages(
 
 interface IProps {
   resumeId: number;
+  /** 当前简历已有的模块：同一 `contentTemplateId` 不允许重复添加 */
+  sections: TSection[];
+  /** 模块列表尚未载入时禁用，避免用空缓存算错 `order` */
+  isDisabled?: boolean;
   /** 触发按钮外层样式 */
   className?: string;
 }
 
 export default function AddSectionModal(props: IProps) {
-  const { resumeId, className } = props;
+  const { resumeId, sections, isDisabled, className } = props;
   const overlay = useOverlayState();
   const queryClient = useQueryClient();
 
@@ -90,6 +96,11 @@ export default function AddSectionModal(props: IProps) {
 
   const listItems = data?.list ?? [];
 
+  const addedTemplateIds = useMemo(
+    () => new Set(sections.map((s) => s.contentTemplateId)),
+    [sections],
+  );
+
   const createMutation = useMutation({
     mutationFn: create,
   });
@@ -102,6 +113,7 @@ export default function AddSectionModal(props: IProps) {
   };
 
   const handleToggle = (template: TContentTemplate) => {
+    if (addedTemplateIds.has(template.id)) return;
     setSubmitError(null);
     setSelected((prev) => {
       const next = new Map(prev);
@@ -118,17 +130,27 @@ export default function AddSectionModal(props: IProps) {
     if (selected.size === 0) return;
     setSubmitError(null);
     try {
+      // 以 props 中最新的 sections 作为基准；父级会在拖拽/删除后通过 query 缓存刷新
+      const baseOrder = sections.reduce(
+        (max, s) => (s.order > max ? s.order : max),
+        0,
+      );
       // 按选择顺序串行创建，保证后端返回的 sections 追加顺序稳定
+      let offset = 1;
       for (const template of selected.values()) {
         const res = await createMutation.mutateAsync({
           resumeId,
           contentTemplateId: template.id,
+          order: baseOrder + offset,
         });
         if (res.code !== 0) {
           throw new Error(res.message || '添加失败');
         }
+        offset += 1;
       }
-      await queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
+      await queryClient.invalidateQueries({
+        queryKey: resumeSectionsQueryKey(resumeId),
+      });
       resetState();
       overlay.close();
     } catch (e) {
@@ -141,6 +163,7 @@ export default function AddSectionModal(props: IProps) {
       <Button
         variant="secondary"
         className={className}
+        isDisabled={isDisabled}
         onPress={() => {
           resetState();
           overlay.open();
@@ -204,6 +227,7 @@ export default function AddSectionModal(props: IProps) {
                 ) : (
                   <section className="grid grid-cols-2 gap-3 xl:grid-cols-3">
                     {listItems.map((item) => {
+                      const added = addedTemplateIds.has(item.id);
                       const checked = selected.has(item.id);
                       return (
                         <button
@@ -211,11 +235,15 @@ export default function AddSectionModal(props: IProps) {
                           type="button"
                           onClick={() => handleToggle(item)}
                           aria-pressed={checked}
+                          aria-disabled={added}
+                          disabled={added}
                           className={[
                             'group relative flex min-h-24 flex-col items-start gap-1 rounded-2xl border p-4 pr-10 text-left transition-all',
-                            checked
-                              ? 'border-accent/60 bg-accent/10'
-                              : 'border-default-200 bg-surface hover:border-default-400',
+                            added
+                              ? 'border-default-200 bg-default-100 cursor-not-allowed opacity-60'
+                              : checked
+                                ? 'border-accent/60 bg-accent/10'
+                                : 'border-default-200 bg-surface hover:border-default-400',
                           ].join(' ')}
                         >
                           <span className="text-foreground line-clamp-2 text-sm font-semibold">
@@ -224,17 +252,23 @@ export default function AddSectionModal(props: IProps) {
                           <span className="text-muted text-xs">
                             {item.infoTemplates.length} 个信息层
                           </span>
-                          <span
-                            aria-hidden
-                            className={[
-                              'absolute top-3 right-3 flex size-5 items-center justify-center rounded-full border',
-                              checked
-                                ? 'border-accent bg-accent text-white'
-                                : 'border-default-300 bg-white text-transparent',
-                            ].join(' ')}
-                          >
-                            <Check className="size-3" />
-                          </span>
+                          {added ? (
+                            <span className="border-default-300 bg-default-200 text-default-600 absolute top-3 right-3 rounded-full border px-2 py-0.5 text-[11px] leading-4">
+                              已添加
+                            </span>
+                          ) : (
+                            <span
+                              aria-hidden
+                              className={[
+                                'absolute top-3 right-3 flex size-5 items-center justify-center rounded-full border',
+                                checked
+                                  ? 'border-accent bg-accent text-white'
+                                  : 'border-default-300 bg-white text-transparent',
+                              ].join(' ')}
+                            >
+                              <Check className="size-3" />
+                            </span>
+                          )}
                         </button>
                       );
                     })}

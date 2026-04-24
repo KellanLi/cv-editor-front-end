@@ -6,15 +6,45 @@ import {
   RangeCalendar,
   TextField,
 } from '@heroui/react';
-import { parseDate } from '@internationalized/date';
+import { parseDate, type CalendarDate } from '@internationalized/date';
 import InfoLayerHoc, { TFormFC, TShowFC, TWrapperFC } from './hoc';
 
 const Wrapper: TWrapperFC = ({ children }) => (
   <div className="flex justify-between">{children}</div>
 );
 
+/**
+ * 兜底解析 `{ start, end }`：空串 / 非法 JSON / 字段缺失 均返回空字符串，
+ * 避免在渲染期抛错阻塞整棵模块树。
+ */
+function parseRange(raw: string | undefined): { start: string; end: string } {
+  if (!raw) return { start: '', end: '' };
+  try {
+    const o = JSON.parse(raw) as { start?: unknown; end?: unknown };
+    const start = typeof o?.start === 'string' ? o.start : '';
+    const end = typeof o?.end === 'string' ? o.end : '';
+    return { start, end };
+  } catch {
+    return { start: '', end: '' };
+  }
+}
+
+/** 空串 / 非法日期返回 `null`，避免 `parseDate('')` 抛错 */
+function parseCalendarDateSafe(v: string): CalendarDate | null {
+  if (!v?.trim()) return null;
+  try {
+    return parseDate(v);
+  } catch {
+    return null;
+  }
+}
+
 const Form: TFormFC = ({ labels, values, onChange }) => {
-  const { start, end } = JSON.parse(values[1]);
+  const { start, end } = parseRange(values[1]);
+  const startDate = parseCalendarDateSafe(start);
+  const endDate = parseCalendarDateSafe(end);
+  const rangeValue =
+    startDate && endDate ? { start: startDate, end: endDate } : null;
   return (
     <>
       <TextField>
@@ -28,13 +58,13 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
         className="w-72"
         endName="endDate"
         startName="startDate"
-        value={{ start: parseDate(start), end: parseDate(end) }}
+        value={rangeValue}
         onChange={(value) =>
           onChange([
             values[0],
             JSON.stringify({
-              start: value?.start?.toString(),
-              end: value?.end?.toString(),
+              start: value?.start?.toString() ?? '',
+              end: value?.end?.toString() ?? '',
             }),
           ])
         }
@@ -87,13 +117,16 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
 };
 
 const Show: TShowFC = ({ values }) => {
-  const { start, end } = JSON.parse(values[1]);
+  const { start, end } = parseRange(values[1]);
+  const hasRange = Boolean(start || end);
   return (
     <>
       <div className="text-base font-bold">{values[0]}</div>
-      <div className="text-base font-bold">
-        {start} ~ {end}
-      </div>
+      {hasRange ? (
+        <div className="text-base font-bold">
+          {start} ~ {end}
+        </div>
+      ) : null}
     </>
   );
 };

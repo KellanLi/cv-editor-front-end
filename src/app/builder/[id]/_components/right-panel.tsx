@@ -1,11 +1,8 @@
 'use client';
 
-import { list as listContentTemplates } from '@/apis/content-template';
 import type { TContentTemplate } from '@/types/business/content-template';
 import type { TSection } from '@/types/business/section';
-import { Tabs } from '@heroui/react';
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { Spinner, Tabs } from '@heroui/react';
 import AddSectionModal from './add-section-modal';
 import SectionList from './section-list';
 
@@ -15,39 +12,25 @@ const TAB_KEYS = {
   DIAGNOSIS: 'diagnosis',
 } as const;
 
-/** 一次性拉取一页较大的 Content Template，足够覆盖常规用户数量，用于 id → name 查找 */
-const CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE = 200;
-
 interface IProps {
   resumeId: number | null;
   sections: TSection[];
+  /** `section/list` 加载中 */
+  sectionsPending?: boolean;
+  /** `section/list` 失败 */
+  sectionsError?: Error | null;
+  /** 由父级统一查询的模版查找表，供名称展示使用 */
+  contentTemplateMap: Map<number, TContentTemplate>;
 }
 
 export default function RightPanel(props: IProps) {
-  const { resumeId, sections } = props;
-
-  const { data: contentTemplateData } = useQuery({
-    queryKey: ['content-template-lookup'],
-    queryFn: async () => {
-      const res = await listContentTemplates({
-        filter: { name: '' },
-        pagination: { page: 1, pageSize: CONTENT_TEMPLATE_LOOKUP_PAGE_SIZE },
-      });
-      if (res.code !== 0) {
-        throw new Error(res.message || '加载失败');
-      }
-      return res.data;
-    },
-    enabled: resumeId != null,
-  });
-
-  const contentTemplateMap = useMemo(() => {
-    const map = new Map<number, TContentTemplate>();
-    for (const t of contentTemplateData?.list ?? []) {
-      map.set(t.id, t);
-    }
-    return map;
-  }, [contentTemplateData?.list]);
+  const {
+    resumeId,
+    sections,
+    sectionsPending,
+    sectionsError,
+    contentTemplateMap,
+  } = props;
 
   return (
     <Tabs
@@ -79,13 +62,26 @@ export default function RightPanel(props: IProps) {
           <>
             <AddSectionModal
               resumeId={resumeId}
+              sections={sections}
+              isDisabled={sectionsPending || sectionsError != null}
               className="w-full justify-center gap-2"
             />
-            <SectionList
-              resumeId={resumeId}
-              sections={sections}
-              contentTemplateMap={contentTemplateMap}
-            />
+            {sectionsPending ? (
+              <div className="text-muted flex min-h-32 items-center justify-center gap-2 text-sm">
+                <Spinner size="md" />
+                加载模块列表…
+              </div>
+            ) : sectionsError ? (
+              <p className="text-danger text-sm" role="alert">
+                {sectionsError.message}
+              </p>
+            ) : (
+              <SectionList
+                resumeId={resumeId}
+                sections={sections}
+                contentTemplateMap={contentTemplateMap}
+              />
+            )}
           </>
         ) : (
           <div className="border-default-200 rounded-xl border border-dashed p-6 text-center">

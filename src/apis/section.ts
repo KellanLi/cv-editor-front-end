@@ -3,6 +3,11 @@ import type { TSectionCreateReq } from '@/types/api/section/create';
 import type { TSectionDeleteReq } from '@/types/api/section/delete';
 import type { TSection } from '@/types/business/section';
 import type { TSectionListReq, TSectionListRes } from '@/types/api/section/list';
+import type {
+  TSectionReorderReq,
+  TSectionReorderRes,
+} from '@/types/api/section/reorder';
+import type { TSectionUpdateReq } from '@/types/api/section/update';
 import type { TUpdateSectionContentReq } from '@/types/api/section/update-content';
 
 export function list(params: TSectionListReq) {
@@ -16,6 +21,16 @@ export function create(params: TSectionCreateReq) {
 /** 删除模块（`delete` 为保留字，故用 `remove`） */
 export function remove(params: TSectionDeleteReq) {
   return post<TSection>('/section/delete', params);
+}
+
+/** 更新模块（仅 order） */
+export function update(params: TSectionUpdateReq) {
+  return post<TSection>('/section/update', params);
+}
+
+/** 批量调整模块顺序（按简历） */
+export function reorder(params: TSectionReorderReq) {
+  return post<TSectionReorderRes>('/section/reorder', params);
 }
 
 export function updateContent(params: TUpdateSectionContentReq) {

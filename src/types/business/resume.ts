@@ -9,5 +9,6 @@ export type TResume = {
   createdAt: string;
   updatedAt: string;
   profile?: TResumeProfile;
-  sections: TSection[];
+  /** `resume/detail` 可能不返回；请用 `section/list` 拉取后单独缓存 */
+  sections?: TSection[];
 };
