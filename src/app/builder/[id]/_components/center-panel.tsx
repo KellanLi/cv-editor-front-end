@@ -36,7 +36,7 @@ export default function CenterPanel(props: IProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto py-8">
-      <div className="flex min-h-[1120px] w-full max-w-[820px] flex-col gap-4 rounded-lg bg-white p-10 shadow-sm">
+      <div className="flex w-full min-h-[1120px] shrink-0 max-w-[820px] flex-col rounded-lg bg-white p-10 shadow-sm">
         {resumeId == null ? (
           <EmptyState className="border-default-300 min-h-48 rounded-2xl border border-dashed">
             <p className="text-muted text-center text-sm">
