@@ -410,81 +410,92 @@ export default function ProfileModule(props: IProfileModuleProps) {
                     </h2>
                   ) : null}
 
-                  {view.birthDate ||
-                  profile?.birthDate ||
-                  view.gender ||
-                  view.targetPosition ||
-                  view.email ||
-                  view.phone ? (
-                    <div className="bg-default-100/60 mt-3 max-w-xl rounded-lg p-3">
-                      <div className="text-foreground/90 flex flex-wrap gap-x-4 gap-y-2.5 text-sm">
+                  {(view.birthDate ||
+                    profile?.birthDate ||
+                    view.gender ||
+                    view.targetPosition ||
+                    view.email ||
+                    view.phone ||
+                    view.tags.length > 0) && (
+                    <div
+                      className="bg-default-100/60 mt-3 max-w-xl rounded-lg p-3"
+                      aria-label={
+                        view.tags.length > 0 ? '资料与标签' : undefined
+                      }
+                    >
+                      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
                         {(view.birthDate || profile?.birthDate) &&
                         birthLabel ? (
-                          <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
+                          <li
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs"
+                            key="_birth"
+                          >
                             <CalendarIcon
-                              className="text-default-400 size-4 shrink-0"
+                              className="text-default-400 size-3.5 shrink-0"
                               strokeWidth={2}
                               aria-hidden
                             />
                             <span className="min-w-0 break-words">
                               {birthLabel}
                             </span>
-                          </span>
+                          </li>
                         ) : null}
                         {view.gender ? (
-                          <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
+                          <li
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs"
+                            key="_gender"
+                          >
                             <UserRound
-                              className="text-default-400 size-4 shrink-0"
+                              className="text-default-400 size-3.5 shrink-0"
                               strokeWidth={2}
                               aria-hidden
                             />
                             <span className="min-w-0 break-words">
                               {view.gender}
                             </span>
-                          </span>
+                          </li>
                         ) : null}
                         {view.targetPosition ? (
-                          <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
+                          <li
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs"
+                            key="_position"
+                          >
                             <Target
-                              className="text-default-400 size-4 shrink-0"
+                              className="text-default-400 size-3.5 shrink-0"
                               strokeWidth={2}
                               aria-hidden
                             />
                             <span className="min-w-0 break-words">
                               {view.targetPosition}
                             </span>
-                          </span>
+                          </li>
                         ) : null}
                         {view.email ? (
-                          <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 break-all">
+                          <li
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 break-all rounded-full px-2.5 py-0.5 text-xs"
+                            key="_email"
+                          >
                             <Mail
-                              className="text-default-400 size-4 shrink-0"
+                              className="text-default-400 size-3.5 shrink-0"
                               strokeWidth={2}
                               aria-hidden
                             />
                             <span className="min-w-0">{view.email}</span>
-                          </span>
+                          </li>
                         ) : null}
                         {view.phone ? (
-                          <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 break-all">
+                          <li
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 break-all rounded-full px-2.5 py-0.5 text-xs"
+                            key="_phone"
+                          >
                             <Phone
-                              className="text-default-400 size-4 shrink-0"
+                              className="text-default-400 size-3.5 shrink-0"
                               strokeWidth={2}
                               aria-hidden
                             />
                             <span className="min-w-0">{view.phone}</span>
-                          </span>
+                          </li>
                         ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {view.tags.length > 0 ? (
-                    <div
-                      className="bg-default-100/50 mt-4 max-w-xl rounded-lg p-3"
-                      aria-label="自定义标签"
-                    >
-                      <ul className="mt-0 flex flex-wrap gap-1.5">
                         {view.tags.map((t) => (
                           <li
                             key={t}
@@ -495,7 +506,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
                         ))}
                       </ul>
                     </div>
-                  ) : null}
+                  )}
                 </div>
 
                 {view.photoUrl ? (
@@ -691,7 +702,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
                       {draft.tags.map((t, i) => (
                         <li
                           key={`${t}-${i}`}
-                          className="text-foreground/90 flex items-center gap-0.5 rounded-full bg-sky-100/90 py-0.5 pr-0.5 pl-2 text-xs"
+                          className="text-foreground/90 bg-default-200/50 flex items-center gap-0.5 rounded-full py-0.5 pr-0.5 pl-2 text-xs"
                         >
                           <span className="max-w-[10rem] truncate" title={t}>
                             {t}

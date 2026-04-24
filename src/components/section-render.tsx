@@ -6,7 +6,7 @@ import type { TInfo } from '@/types/business/info';
 import type { TContentTemplate } from '@/types/business/content-template';
 import type { TInfoTemplate } from '@/types/business/info-template';
 import { Button } from '@heroui/react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useCallback, useMemo, useState, type MouseEvent } from 'react';
 
 type TInfoTemplateRow = TInfoTemplate & { keyId?: string };
@@ -112,6 +112,18 @@ export default function SectionRender(props: IProps) {
     setActive(null);
   }, [contents, onContentsChange, templates]);
 
+  const handleRemoveContent = useCallback(
+    (contentIndex: number) => {
+      onContentsChange(
+        contents
+          .filter((_, i) => i !== contentIndex)
+          .map((c, i) => ({ ...c, order: i + 1 })),
+      );
+      setActive(null);
+    },
+    [contents, onContentsChange],
+  );
+
   const handleInfoChange = useCallback(
     (contentIndex: number, layerIndex: number, values: string[]) => {
       onContentsChange(
@@ -168,26 +180,29 @@ export default function SectionRender(props: IProps) {
         {contents.length === 0 ? (
           <p className="text-muted text-sm">暂无内容</p>
         ) : (
-          contents.map((content, contentIndex) => (
-            <div key={contentIndex} className="flex flex-col">
-              {templates.map((template, layerIndex) => {
+          contents.map((content, contentIndex) => {
+              const isContentActive =
+                status === 'edit' &&
+                resolvedActive?.contentIndex === contentIndex;
+
+              const layerBlocks = templates.map((template, layerIndex) => {
                 const meta = INFO_LAYER_MAP[template.type as INFO_LAYER];
                 if (!meta) return null;
                 const Layer = meta.component;
                 const { values } = getInfoAt(content, layerIndex, template);
                 const labels = labelsForTemplate(template);
-                const isActive =
+                const isLayerActive =
                   resolvedActive?.contentIndex === contentIndex &&
                   resolvedActive?.layerIndex === layerIndex;
 
                 const boxClass = [
                   'rounded-xl border transition-[border-color,box-shadow,background-color]',
-                  status === 'edit' && isActive && 'p-3',
+                  status === 'edit' && isLayerActive && 'p-3',
                   status === 'edit' &&
-                    !isActive &&
+                    !isLayerActive &&
                     'cursor-pointer border-transparent hover:border-default-300 hover:bg-default-100/70',
                   status === 'edit' &&
-                    isActive &&
+                    isLayerActive &&
                     'border-accent bg-default-50/90 ring-2 ring-accent/25',
                   status === 'view' && 'border-transparent',
                 ]
@@ -202,17 +217,22 @@ export default function SectionRender(props: IProps) {
                       handleLayerClick(e, contentIndex, layerIndex)
                     }
                     onKeyDown={(e) => {
-                      if (status !== 'edit' || isActive) return;
+                      if (status !== 'edit' || isLayerActive) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         setActive({ contentIndex, layerIndex });
                       }
                     }}
-                    role={status === 'edit' && !isActive ? 'button' : undefined}
-                    tabIndex={status === 'edit' && !isActive ? 0 : undefined}
+                    role={
+                      status === 'edit' && !isLayerActive ? 'button' : undefined
+                    }
+                    tabIndex={
+                      status === 'edit' && !isLayerActive ? 0 : undefined
+                    }
                   >
                     <Layer
-                      active={Boolean(isActive)}
+                      active={Boolean(isLayerActive)}
+                      sectionStatus={status}
                       labels={labels}
                       values={values}
                       onChange={(next) =>
@@ -221,9 +241,37 @@ export default function SectionRender(props: IProps) {
                     />
                   </div>
                 );
-              })}
-            </div>
-          ))
+              });
+
+              return (
+                <div key={contentIndex} className="flex flex-col">
+                  {isContentActive ? (
+                    <div
+                      className="rounded-xl border border-dashed border-foreground/35 p-2.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {layerBlocks}
+                      <div className="pt-2.5">
+                        <Button
+                          type="button"
+                          variant="danger-soft"
+                          size="sm"
+                          fullWidth
+                          className="inline-flex items-center justify-center gap-1.5"
+                          aria-label="删除此条内容"
+                          onPress={() => handleRemoveContent(contentIndex)}
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                          删除此条内容
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    layerBlocks
+                  )}
+                </div>
+              );
+            })
         )}
       </div>
 

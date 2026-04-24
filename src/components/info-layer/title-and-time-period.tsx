@@ -8,9 +8,10 @@ import {
 } from '@heroui/react';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import InfoLayerHoc, { TFormFC, TShowFC, TWrapperFC } from './hoc';
+import { INFO_LAYER_VALUE_HINT, ValueHintPlaceholder } from './value-hint-placeholder';
 
 const Wrapper: TWrapperFC = ({ children }) => (
-  <div className="flex justify-between">{children}</div>
+  <div className="flex flex-wrap justify-between gap-4">{children}</div>
 );
 
 /**
@@ -39,38 +40,41 @@ function parseCalendarDateSafe(v: string): CalendarDate | null {
   }
 }
 
-const Form: TFormFC = ({ labels, values, onChange }) => {
+const Form: TFormFC = ({ labels, values, onChange, sectionStatus }) => {
   const { start, end } = parseRange(values[1]);
   const startDate = parseCalendarDateSafe(start);
   const endDate = parseCalendarDateSafe(end);
   const rangeValue =
     startDate && endDate ? { start: startDate, end: endDate } : null;
+  const ph = sectionStatus === 'edit' ? INFO_LAYER_VALUE_HINT : undefined;
   return (
     <>
-      <TextField>
+      <TextField className="min-w-0 flex-1">
         <Label>{labels[0]}</Label>
         <Input
+          placeholder={ph}
           value={values[0]}
           onChange={(e) => onChange([e.target.value, values[1]])}
         />
       </TextField>
-      <DateRangePicker
-        className="w-72"
-        endName="endDate"
-        startName="startDate"
-        value={rangeValue}
-        onChange={(value) =>
-          onChange([
-            values[0],
-            JSON.stringify({
-              start: value?.start?.toString() ?? '',
-              end: value?.end?.toString() ?? '',
-            }),
-          ])
-        }
-      >
-        <Label>{labels[1]}</Label>
-        <DateField.Group fullWidth>
+      <div className="w-72 min-w-0 shrink-0">
+        <DateRangePicker
+          className="w-72"
+          endName="endDate"
+          startName="startDate"
+          value={rangeValue}
+          onChange={(value) =>
+            onChange([
+              values[0],
+              JSON.stringify({
+                start: value?.start?.toString() ?? '',
+                end: value?.end?.toString() ?? '',
+              }),
+            ])
+          }
+        >
+          <Label>{labels[1]}</Label>
+          <DateField.Group fullWidth>
           <DateField.Input slot="start">
             {(segment) => <DateField.Segment segment={segment} />}
           </DateField.Input>
@@ -112,18 +116,33 @@ const Form: TFormFC = ({ labels, values, onChange }) => {
           </RangeCalendar>
         </DateRangePicker.Popover>
       </DateRangePicker>
+      </div>
     </>
   );
 };
 
-const Show: TShowFC = ({ values }) => {
+const Show: TShowFC = ({ values, sectionStatus }) => {
   const { start, end } = parseRange(values[1]);
-  const hasRange = Boolean(start || end);
+  const hasRange = Boolean(
+    (start && start.trim()) || (end && end.trim()),
+  );
+  const isEdit = sectionStatus === 'edit';
+  const titleEmpty = !String(values[0] ?? '').trim();
+  const timeTextClass = 'min-w-0 flex-1 text-right text-base font-bold';
+
   return (
     <>
-      <div className="text-base font-bold">{values[0]}</div>
-      {hasRange ? (
-        <div className="text-base font-bold">
+      {isEdit && titleEmpty ? (
+        <ValueHintPlaceholder className="min-w-0 flex-1" />
+      ) : (
+        <div className="min-w-0 flex-1 text-left text-base font-bold">
+          {values[0]}
+        </div>
+      )}
+      {isEdit && !hasRange ? (
+        <ValueHintPlaceholder className="min-w-0 flex-1" endAlign />
+      ) : hasRange ? (
+        <div className={timeTextClass}>
           {start} ~ {end}
         </div>
       ) : null}
