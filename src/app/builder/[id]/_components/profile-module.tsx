@@ -472,7 +472,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
                         ) : null}
                         {view.email ? (
                           <li
-                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 break-all rounded-full px-2.5 py-0.5 text-xs"
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs break-all"
                             key="_email"
                           >
                             <Mail
@@ -485,7 +485,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
                         ) : null}
                         {view.phone ? (
                           <li
-                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 break-all rounded-full px-2.5 py-0.5 text-xs"
+                            className="text-foreground/90 bg-default-200/50 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs break-all"
                             key="_phone"
                           >
                             <Phone
