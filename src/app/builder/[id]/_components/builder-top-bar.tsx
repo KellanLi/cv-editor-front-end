@@ -78,7 +78,7 @@ export default function BuilderTopBar(props: IProps) {
   const router = useRouter();
 
   return (
-    <header className="bg-background flex h-14 shrink-0 items-center gap-2 px-3">
+    <header className="print:hidden bg-background flex h-14 shrink-0 items-center gap-2 px-3">
       <Tooltip delay={300}>
         <Button
           aria-label="返回简历列表"
@@ -168,10 +168,20 @@ export default function BuilderTopBar(props: IProps) {
 
         <InlineDivider />
 
-        <Button variant="secondary" size="sm" onPress={onExport}>
-          <Download className="size-4" aria-hidden />
-          导出
-        </Button>
+        <Tooltip delay={300}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={onExport}
+            aria-label="导出为 PDF"
+          >
+            <Download className="size-4" aria-hidden />
+            导出
+          </Button>
+          <Tooltip.Content>
+            <p>打开系统打印，目标选「另存为 PDF」</p>
+          </Tooltip.Content>
+        </Tooltip>
 
         <Button
           variant="primary"

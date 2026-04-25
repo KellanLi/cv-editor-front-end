@@ -134,7 +134,7 @@ export default function BuilderPage() {
 
   return (
     <ResumeSnapshotProvider>
-    <div className="bg-background flex h-lvh min-h-0 flex-col overflow-hidden">
+    <div className="bg-background flex h-lvh min-h-0 flex-col overflow-hidden print:h-auto print:min-h-0 print:overflow-visible">
       <BuilderTopBar
         title={resume?.title ?? ''}
         titleState={titleState}
@@ -144,7 +144,7 @@ export default function BuilderPage() {
         onToggleLeftPanel={() => setLeftOpen((v) => !v)}
         onToggleRightPanel={() => setRightOpen((v) => !v)}
         onExport={() => {
-          // TODO: 导出功能
+          window.print();
         }}
         onSave={() => {
           // TODO: 手动保存
@@ -161,7 +161,7 @@ export default function BuilderPage() {
         {leftOpen ? (
           <>
             <aside
-              className="bg-background shrink-0"
+              className="print:hidden bg-background shrink-0"
               style={{ width: leftWidth }}
             >
               <LeftPanel />
@@ -177,7 +177,7 @@ export default function BuilderPage() {
           </>
         ) : null}
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl bg-white">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl bg-white print:min-h-0 print:overflow-visible print:rounded-none print:shadow-none">
           <CenterPanel
             ref={captureRootRef}
             resumeId={resumeId}
@@ -209,7 +209,7 @@ export default function BuilderPage() {
               onChange={setRightWidth}
             />
             <aside
-              className="bg-background shrink-0"
+              className="print:hidden bg-background shrink-0"
               style={{ width: rightWidth }}
             >
               <RightPanel

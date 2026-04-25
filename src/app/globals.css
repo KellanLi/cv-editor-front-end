@@ -5,3 +5,34 @@
 
 /* @import "../styles/themes.css" layer(theme); */
 /* @import "../styles/var.css"; */
+
+/* 预览区缩放只作用于屏幕；打印/导出 PDF 固定为 1:1，与预览 zoom 无关 */
+@media screen {
+  .resume-print-root {
+    zoom: var(--resume-preview-zoom, 1);
+  }
+}
+
+/* 简历编辑器：导出为 PDF 使用系统打印，矢量文字与可控分页 */
+@media print {
+  @page {
+    size: a4;
+    /* 比 12mm 更窄的左右白边，仍便于装订与阅读 */
+    margin: 8mm 6mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    height: auto !important;
+  }
+
+  .resume-print-root {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    /* 覆盖内联预览区固定宽度与 `zoom` */
+    width: 100% !important;
+    max-width: 100% !important;
+    zoom: 1 !important;
+  }
+}

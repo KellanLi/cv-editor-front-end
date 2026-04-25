@@ -88,7 +88,7 @@ export default function ResizeHandle(props: IProps) {
       tabIndex={0}
       data-dragging={dragging || undefined}
       className={[
-        'group relative z-10 w-1 shrink-0 touch-none cursor-ew-resize select-none outline-none',
+        'print:hidden group relative z-10 w-1 shrink-0 touch-none cursor-ew-resize select-none outline-none',
         // 扩大点击热区而不改变视觉宽度
         'before:absolute before:inset-y-0 before:-left-1 before:-right-1 before:content-[""]',
       ].join(' ')}

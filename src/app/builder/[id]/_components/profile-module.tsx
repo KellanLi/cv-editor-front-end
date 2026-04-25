@@ -399,7 +399,7 @@ export default function ProfileModule(props: IProfileModuleProps) {
 
   return (
     <>
-      <div ref={rootRef} className="w-full max-w-3xl">
+      <div ref={rootRef} className="w-full max-w-3xl print:max-w-none">
         {moduleStatus === 'view' ? (
           <div
             role="button"
