@@ -54,3 +54,32 @@ export async function post<T = unknown, D = unknown>(
     body: data ? JSON.stringify(data) : undefined,
   });
 }
+
+/**
+ * 与 `post` 相同鉴权，但不解析 body；用于 SSE 等流式端点（如 `/ai/chat/stream`）。
+ */
+export async function postSse(
+  url: string,
+  data?: unknown,
+  options: RequestInit = {},
+): Promise<Response> {
+  const token = storage.getToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(options.headers ?? {}),
+    ...(token ? { Authorization: `Bearer ${token.value}` } : {}),
+  };
+
+  const res = await fetch(BASE_URL + url, {
+    ...options,
+    method: 'POST',
+    body: data !== undefined ? JSON.stringify(data) : undefined,
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error(res.statusText);
+  }
+
+  return res;
+}

@@ -25,7 +25,7 @@ const navItems: INavItem[] = [
     path: `${PREFIX}/${PATH_KEY.RESUMES}`,
   },
   {
-    name: '模板管理',
+    name: '模块管理',
     key: PATH_KEY.SECTIONS,
     path: `${PREFIX}/${PATH_KEY.SECTIONS}`,
   },
