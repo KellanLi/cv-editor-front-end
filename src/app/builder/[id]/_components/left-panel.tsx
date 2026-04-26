@@ -4,7 +4,11 @@ import {
   ResumeAiConversationProvider,
   useResumeAiConversation,
 } from './resume-ai-conversation-context';
+import { listMessages } from '@/apis/ai';
+import { toChatLinesFromServerMessages } from '@/lib/ai/ai-message-text';
+import { streamAiChat } from '@/lib/ai/stream-chat';
 import type { TAiConversation } from '@/types/business/ai-conversation';
+import { AiChatMarkdown } from '@/components/ai-chat-markdown';
 import {
   Button,
   Input,
@@ -25,7 +29,14 @@ import {
   SendHorizontal,
   Trash2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 
 function displayTitle(c: TAiConversation) {
   return c.title?.trim() || '未命名对话';
@@ -61,6 +72,8 @@ function historyBucket(c: TAiConversation): THistoryBucket {
 function sortKeyTime(c: TAiConversation) {
   return new Date(c.lastMsgAt ?? c.updatedAt).getTime();
 }
+
+const AI_MESSAGE_LIST_PAGE_SIZE = 500;
 
 const HISTORY_SECTIONS: { bucket: THistoryBucket; label: string }[] = [
   { bucket: 'today', label: '今天' },
@@ -183,28 +196,67 @@ interface ILeftPanelProps {
   resumeId: number | null;
 }
 
-function PlaceholderMessages() {
+type TChatLine = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  isStreaming?: boolean;
+};
+
+function newLineId() {
+  return `m-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function MessageList(props: {
+  lines: TChatLine[];
+  endRef: RefObject<HTMLDivElement | null>;
+}) {
+  const { lines, endRef } = props;
   return (
-    <div className="text-muted/90 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-2">
-      <p className="text-default-500 px-1 text-center text-xs">
-        以下为示意布局，非真实消息
-      </p>
-      <div className="ml-0 max-w-[92%]">
-        <div className="bg-surface text-foreground/90 inline-block rounded-2xl rounded-tl-sm px-3 py-2 text-sm shadow-sm ring-1 ring-black/5">
-          可以帮我看看这段项目经历怎么写更贴岗位吗？
-        </div>
-      </div>
-      <div className="mr-0 max-w-[92%] self-end">
-        <div className="bg-accent/12 text-foreground/90 inline-block rounded-2xl rounded-tr-sm px-3 py-2 text-sm ring-1 ring-[var(--color-border)]">
-          建议突出与你投递岗位强相关的技术栈，并用一条量化结果收束，例如将「参与」改为可验证的指标。
-        </div>
-      </div>
+    <div
+      className="text-muted/90 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 [scrollbar-gutter:stable]"
+      role="log"
+      aria-relevant="additions"
+      aria-label="对话消息"
+    >
+      {lines.length === 0 ? (
+        <p className="text-default-500 px-1 py-4 text-center text-xs">
+          在下方输入内容并发送，AI 将流式显示回复
+        </p>
+      ) : null}
+      {lines.map((line) =>
+        line.role === 'user' ? (
+          <div key={line.id} className="mr-0 max-w-[92%] self-end">
+            <div className="bg-accent/12 text-foreground/90 inline-block max-w-full rounded-2xl rounded-tr-sm px-3 py-2 break-words ring-1 ring-[var(--color-border)]">
+              <AiChatMarkdown content={line.text} />
+            </div>
+          </div>
+        ) : (
+          <div key={line.id} className="ml-0 max-w-[92%]">
+            <div
+              className={`text-foreground/90 inline-block max-w-full rounded-2xl rounded-tl-sm px-3 py-2 break-words shadow-sm ring-1 ring-black/5 ${
+                line.isStreaming ? 'bg-surface/90' : 'bg-surface'
+              }`}
+            >
+              {line.isStreaming && line.text.length === 0 ? (
+                <span className="text-default-500 text-sm">
+                  正在思考…
+                </span>
+              ) : (
+                <AiChatMarkdown content={line.text} />
+              )}
+            </div>
+          </div>
+        ),
+      )}
+      <div ref={endRef} className="h-px w-full shrink-0" aria-hidden />
     </div>
   );
 }
 
 function AiChatLayout() {
   const {
+    resumeId,
     activeConversation,
     isLoading,
     isError,
@@ -218,11 +270,243 @@ function AiChatLayout() {
     isCreating,
     isRenaming,
     isDeleting,
+    refetchConversations,
   } = useResumeAiConversation();
 
   const historyOpen = useOverlayState();
   const [mode, setMode] = useState<TMode>('ask');
   const [inputDraft, setInputDraft] = useState('');
+
+  const [messagesByConv, setMessagesByConv] = useState<
+    Record<number, TChatLine[]>
+  >({});
+  const [isStreamPending, setIsStreamPending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [threadMessagesLoading, setThreadMessagesLoading] = useState(false);
+  const [threadMessagesError, setThreadMessagesError] = useState<string | null>(
+    null,
+  );
+  const abortRef = useRef<AbortController | null>(null);
+  const listLoadIdRef = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const linesForThread = useMemo(
+    () => (selectedId != null ? (messagesByConv[selectedId] ?? []) : []),
+    [messagesByConv, selectedId],
+  );
+
+  const appendLines = useCallback(
+    (convId: number, add: (prev: TChatLine[]) => TChatLine[]) => {
+      setMessagesByConv((m) => {
+        const cur = m[convId] ?? [];
+        return { ...m, [convId]: add([...cur]) };
+      });
+    },
+    [],
+  );
+
+  const scrollToBottom = useCallback(() => {
+    queueMicrotask(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [linesForThread, scrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedId == null) return;
+    abortRef.current?.abort();
+    const my = ++listLoadIdRef.current;
+    setThreadMessagesError(null);
+    setThreadMessagesLoading(true);
+    void (async () => {
+      try {
+        const res = await listMessages({
+          filter: { conversationId: selectedId },
+          pagination: { page: 1, pageSize: AI_MESSAGE_LIST_PAGE_SIZE },
+        });
+        if (listLoadIdRef.current !== my) return;
+        if (res.code !== 0) {
+          setThreadMessagesError(res.message || '历史消息加载失败');
+          return;
+        }
+        const lines: TChatLine[] = toChatLinesFromServerMessages(
+          res.data.list,
+        ).map((l) => ({ ...l }));
+        setMessagesByConv((m) => ({ ...m, [selectedId]: lines }));
+      } catch (e) {
+        if (listLoadIdRef.current !== my) return;
+        setThreadMessagesError(
+          e instanceof Error ? e.message : '历史消息加载失败',
+        );
+      } finally {
+        if (listLoadIdRef.current === my) {
+          setThreadMessagesLoading(false);
+        }
+      }
+    })();
+  }, [selectedId]);
+
+  const sendUserMessage = useCallback(async () => {
+    const raw = inputDraft.replace(/\r\n/g, '\n');
+    const trimmed = raw.trim();
+    if (trimmed === '' || isStreamPending || threadMessagesLoading) return;
+
+    setSendError(null);
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    let conv: TAiConversation | null = activeConversation;
+    try {
+      if (conv == null) {
+        const created = await createThread();
+        if (created) conv = created;
+      }
+      if (conv == null) {
+        setSendError('没有可用对话，请稍后重试');
+        return;
+      }
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : '无法创建对话');
+      return;
+    }
+
+    const convId = conv.id;
+    if (selectedId !== convId) {
+      setSelectedId(convId);
+    }
+    setInputDraft('');
+
+    const userLine: TChatLine = {
+      id: newLineId(),
+      role: 'user',
+      text: raw.replace(/^\s+|\s+$/g, ''),
+    };
+    const asstId = newLineId();
+    const asstLine: TChatLine = {
+      id: asstId,
+      role: 'assistant',
+      text: '',
+      isStreaming: true,
+    };
+    setMessagesByConv((m) => {
+      const cur = m[convId] ?? [];
+      return {
+        ...m,
+        [convId]: [...cur, userLine, asstLine],
+      };
+    });
+    setIsStreamPending(true);
+
+    try {
+      await streamAiChat(
+        {
+          resumeId,
+          userMessage: trimmed,
+          conversationId: convId,
+          purpose: conv.purpose,
+        },
+        (ev) => {
+          const { data } = ev;
+          if (ac.signal.aborted) return;
+          if (data.phase === 'message' && data.deltaText) {
+            appendLines(convId, (prev) => {
+              const next = [...prev];
+              const i = next.findIndex((l) => l.id === asstId);
+              if (i >= 0) {
+                const cur = next[i]!;
+                next[i] = {
+                  ...cur,
+                  text: cur.text + data.deltaText!,
+                };
+              }
+              return next;
+            });
+            scrollToBottom();
+            return;
+          }
+          if (data.phase === 'error') {
+            const msg = (data.deltaText || '流式错误').trim();
+            appendLines(convId, (prev) => {
+              const next = [...prev];
+              const i = next.findIndex((l) => l.id === asstId);
+              if (i >= 0) {
+                const cur = next[i]!;
+                next[i] = {
+                  ...cur,
+                  text: cur.text ? `${cur.text}\n\n[错误] ${msg}` : msg,
+                  isStreaming: false,
+                };
+              }
+              return next;
+            });
+          }
+        },
+        { signal: ac.signal },
+      );
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        appendLines(convId, (prev) => {
+          const next = [...prev];
+          const i = next.findIndex((l) => l.id === asstId);
+          if (i >= 0) {
+            next[i] = { ...next[i]!, isStreaming: false };
+          }
+          return next;
+        });
+      } else {
+        const msg = e instanceof Error ? e.message : '发送失败';
+        appendLines(convId, (prev) => {
+          const next = [...prev];
+          const i = next.findIndex((l) => l.id === asstId);
+          if (i >= 0) {
+            const cur = next[i]!;
+            next[i] = {
+              ...cur,
+              text: cur.text ? `${cur.text}\n\n[错误] ${msg}` : msg,
+              isStreaming: false,
+            };
+          }
+          return next;
+        });
+        setSendError(msg);
+      }
+    } finally {
+      if (!ac.signal.aborted) {
+        appendLines(convId, (prev) => {
+          const next = [...prev];
+          const i = next.findIndex((l) => l.id === asstId);
+          if (i >= 0 && next[i]!.isStreaming) {
+            next[i] = { ...next[i]!, isStreaming: false };
+          }
+          return next;
+        });
+        void refetchConversations();
+      }
+      setIsStreamPending(false);
+    }
+  }, [
+    inputDraft,
+    isStreamPending,
+    threadMessagesLoading,
+    activeConversation,
+    createThread,
+    resumeId,
+    selectedId,
+    setSelectedId,
+    appendLines,
+    scrollToBottom,
+    refetchConversations,
+  ]);
 
   const [createError, setCreateError] = useState<string | null>(null);
   const renameModal = useOverlayState();
@@ -405,6 +689,16 @@ function AiChatLayout() {
           {createError}
         </p>
       ) : null}
+      {sendError ? (
+        <p className="text-danger shrink-0 px-3 pb-0.5 text-center text-xs">
+          {sendError}
+        </p>
+      ) : null}
+      {threadMessagesError ? (
+        <p className="text-danger shrink-0 px-3 pb-0.5 text-center text-xs">
+          {threadMessagesError}
+        </p>
+      ) : null}
 
       <div className="bg-default-50/40 flex min-h-0 min-w-0 flex-1 flex-col">
         {isError && error ? (
@@ -416,7 +710,18 @@ function AiChatLayout() {
             加载中…
           </div>
         ) : (
-          <PlaceholderMessages />
+          <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+            {threadMessagesLoading && selectedId != null ? (
+              <div
+                className="bg-default-50/40 absolute inset-0 z-10 flex items-center justify-center"
+                aria-busy
+                aria-label="加载历史消息"
+              >
+                <Spinner className="size-6" />
+              </div>
+            ) : null}
+            <MessageList lines={linesForThread} endRef={messagesEndRef} />
+          </div>
         )}
       </div>
 
@@ -429,9 +734,17 @@ function AiChatLayout() {
             id="ai-left-chat-input"
             className="text-foreground ring-none placeholder:text-muted/80 max-h-40 min-h-24 w-full resize-none border-0 bg-transparent px-3.5 py-2.5 pb-11 text-sm outline-none"
             style={{ minHeight: '5.5rem' }}
-            placeholder="输入问题或指令，发送后将在后续接流式回答…"
+            placeholder="输入问题或指令，Enter 发送，Shift+Enter 换行"
             value={inputDraft}
             onChange={(e) => setInputDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isStreamPending) void sendUserMessage();
+              }
+            }}
+            readOnly={isStreamPending || threadMessagesLoading}
+            aria-busy={isStreamPending}
           />
           <div className="absolute bottom-2 left-2 z-10 flex h-6 min-h-6 items-center">
             <Select
@@ -475,16 +788,28 @@ function AiChatLayout() {
               size="sm"
               isIconOnly
               variant="secondary"
-              isDisabled
-              className="h-8 w-8 opacity-50"
-              aria-label="发送（未接入）"
+              isDisabled={
+                isStreamPending ||
+                threadMessagesLoading ||
+                inputDraft.trim() === '' ||
+                isLoading
+              }
+              className="h-8 w-8"
+              aria-label="发送"
+              onPress={() => {
+                if (!isStreamPending) void sendUserMessage();
+              }}
             >
-              <SendHorizontal className="size-4" aria-hidden />
+              {isStreamPending ? (
+                <Spinner className="size-4" />
+              ) : (
+                <SendHorizontal className="size-4" aria-hidden />
+              )}
             </Button>
           </div>
         </div>
         <p className="text-muted mt-1.5 px-0.5 text-center text-[0.7rem] leading-tight">
-          对话区与流式能力开发中
+          回复为 SSE 流式增量（与后端 `writeSse` 协议一致）
         </p>
       </div>
 

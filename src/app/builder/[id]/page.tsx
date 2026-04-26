@@ -161,7 +161,7 @@ export default function BuilderPage() {
         {leftOpen ? (
           <>
             <aside
-              className="print:hidden bg-background shrink-0"
+              className="print:hidden bg-background flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden shrink-0"
               style={{ width: leftWidth }}
             >
               <LeftPanel resumeId={resumeId} />

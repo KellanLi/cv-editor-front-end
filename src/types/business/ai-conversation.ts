@@ -25,9 +25,10 @@ export type TAiMessage = {
   seq: number;
   role: TAiMessageRole;
   createdAt: string;
-  text?: Record<string, unknown> | null;
-  contentJson?: Record<string, unknown> | null;
-  providerMeta?: Record<string, unknown> | null;
+  /** 主展示文本，与存库/接口一致为普通字符串；历史上若曾返回 object 仍可在展示层做兼容。 */
+  text?: string | null;
+  contentJson?: unknown;
+  providerMeta?: unknown;
   toolCalls?: TAiToolCall[];
 };
 
