@@ -7,6 +7,8 @@ import {
 import { listMessages } from '@/apis/ai';
 import { toChatLinesFromServerMessages } from '@/lib/ai/ai-message-text';
 import { streamAiChat } from '@/lib/ai/stream-chat';
+import { resumeAiConversationsQueryKey } from '@/lib/builder-resume-keys';
+import type { TAiConversationListRes } from '@/types/api/ai/conversation-list';
 import type { TAiConversation } from '@/types/business/ai-conversation';
 import { AiChatMarkdown } from '@/components/ai-chat-markdown';
 import {
@@ -30,6 +32,7 @@ import {
   SendHorizontal,
   Trash2,
 } from 'lucide-react';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
@@ -208,6 +211,74 @@ function newLineId() {
   return `m-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function tryParseConversationIdFromStreamPayload(
+  payload: unknown,
+): number | null {
+  if (payload == null) return null;
+  if (typeof payload !== 'object') return null;
+  const p = payload as Record<string, unknown>;
+  for (const key of ['conversationId', 'conversation_id'] as const) {
+    const v = p[key];
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      return v;
+    }
+  }
+  if (p.payload != null && typeof p.payload === 'object') {
+    return tryParseConversationIdFromStreamPayload(p.payload);
+  }
+  return null;
+}
+
+const CONVERSATION_LIST_CACHE_PAGE = 1;
+const CONVERSATION_LIST_PAGE_SIZE = 100;
+
+/** 流式返回的 `conversationId` 写入列表缓存，避免在 refetch 完成前被「自动选中首条」逻辑误切回上一条。 */
+function upsertStreamCreatedConversationInCache(
+  client: QueryClient,
+  resumeId: number,
+  newId: number,
+) {
+  const key = resumeAiConversationsQueryKey(
+    resumeId,
+    CONVERSATION_LIST_CACHE_PAGE,
+  );
+  const now = new Date().toISOString();
+  const row: TAiConversation = {
+    id: newId,
+    resumeId,
+    purpose: 'DIALOGUE_EDIT',
+    threadId: '',
+    title: null,
+    status: 'active',
+    lastMsgAt: now,
+    createdAt: now,
+    updatedAt: now,
+  };
+  client.setQueryData<TAiConversationListRes | undefined>(key, (old) => {
+    if (old != null && old.list.some((c) => c.id === newId)) {
+      return old;
+    }
+    if (old == null) {
+      return {
+        list: [row],
+        pagination: {
+          page: 1,
+          pageSize: CONVERSATION_LIST_PAGE_SIZE,
+          total: 1,
+        },
+      };
+    }
+    return {
+      ...old,
+      list: [row, ...old.list],
+      pagination: {
+        ...old.pagination,
+        total: (old.pagination.total ?? old.list.length) + 1,
+      },
+    };
+  });
+}
+
 function MessageList(props: {
   lines: TChatLine[];
   endRef: RefObject<HTMLDivElement | null>;
@@ -215,7 +286,7 @@ function MessageList(props: {
   const { lines, endRef } = props;
   return (
     <div
-      className="text-muted/90 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-2 [scrollbar-gutter:stable]"
+      className="text-muted/90 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-2 [scrollbar-gutter:stable]"
       role="log"
       aria-relevant="additions"
       aria-label="对话消息"
@@ -240,9 +311,7 @@ function MessageList(props: {
               }`}
             >
               {line.isStreaming && line.text.length === 0 ? (
-                <span className="text-default-500 text-sm">
-                  正在思考…
-                </span>
+                <span className="text-default-500 text-sm">正在思考…</span>
               ) : (
                 <AiChatMarkdown content={line.text} />
               )}
@@ -265,15 +334,16 @@ function AiChatLayout() {
     conversations,
     selectedId,
     setSelectedId,
-    createThread,
+    pendingNewThread,
+    startNewThreadDraft,
     deleteThread,
     renameThread,
-    isCreating,
     isRenaming,
     isDeleting,
     refetchConversations,
   } = useResumeAiConversation();
 
+  const queryClient = useQueryClient();
   const historyOpen = useOverlayState();
   const [mode, setMode] = useState<TMode>('ask');
   const [enableWebSearch, setEnableWebSearch] = useState(false);
@@ -282,6 +352,8 @@ function AiChatLayout() {
   const [messagesByConv, setMessagesByConv] = useState<
     Record<number, TChatLine[]>
   >({});
+  /** 尚无服务端 conversationId 时的流式/草稿行（新对话或零会话时首条消息） */
+  const [unsavedThreadLines, setUnsavedThreadLines] = useState<TChatLine[]>([]);
   const [isStreamPending, setIsStreamPending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [threadMessagesLoading, setThreadMessagesLoading] = useState(false);
@@ -290,11 +362,26 @@ function AiChatLayout() {
   );
   const abortRef = useRef<AbortController | null>(null);
   const listLoadIdRef = useRef(0);
+  const activeStreamConvIdRef = useRef<number | null>(null);
+  /** 流式首条刚返回 `conversationId` 时跳过 `listMessages`，避免用空/不完整服务端列表覆盖正在流式更新的本地消息 */
+  const skipNextHistoryLoadForConvIdRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const isDraftListView = useMemo(
+    () =>
+      (pendingNewThread && selectedId == null) ||
+      (conversations.length === 0 && selectedId == null),
+    [pendingNewThread, conversations.length, selectedId],
+  );
+
   const linesForThread = useMemo(
-    () => (selectedId != null ? (messagesByConv[selectedId] ?? []) : []),
-    [messagesByConv, selectedId],
+    () =>
+      isDraftListView
+        ? unsavedThreadLines
+        : selectedId != null
+          ? (messagesByConv[selectedId] ?? [])
+          : [],
+    [isDraftListView, unsavedThreadLines, messagesByConv, selectedId],
   );
 
   const appendLines = useCallback(
@@ -309,7 +396,10 @@ function AiChatLayout() {
 
   const scrollToBottom = useCallback(() => {
     queueMicrotask(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      messagesEndRef.current?.scrollIntoView({
+        behavior: 'auto',
+        block: 'end',
+      });
     });
   }, []);
 
@@ -325,6 +415,10 @@ function AiChatLayout() {
 
   useEffect(() => {
     if (selectedId == null) return;
+    if (skipNextHistoryLoadForConvIdRef.current === selectedId) {
+      skipNextHistoryLoadForConvIdRef.current = null;
+      return;
+    }
     abortRef.current?.abort();
     const my = ++listLoadIdRef.current;
     setThreadMessagesError(null);
@@ -367,25 +461,13 @@ function AiChatLayout() {
     const ac = new AbortController();
     abortRef.current = ac;
 
-    let conv: TAiConversation | null = activeConversation;
-    try {
-      if (conv == null) {
-        const created = await createThread();
-        if (created) conv = created;
-      }
-      if (conv == null) {
-        setSendError('没有可用对话，请稍后重试');
-        return;
-      }
-    } catch (e) {
-      setSendError(e instanceof Error ? e.message : '无法创建对话');
-      return;
-    }
+    const startedAsNewStream = selectedId == null;
+    const purpose: TAiConversation['purpose'] =
+      activeConversation?.purpose ?? 'DIALOGUE_EDIT';
 
-    const convId = conv.id;
-    if (selectedId !== convId) {
-      setSelectedId(convId);
-    }
+    activeStreamConvIdRef.current = startedAsNewStream
+      ? null
+      : (selectedId as number);
     setInputDraft('');
 
     const userLine: TChatLine = {
@@ -400,100 +482,228 @@ function AiChatLayout() {
       text: '',
       isStreaming: true,
     };
-    setMessagesByConv((m) => {
-      const cur = m[convId] ?? [];
-      return {
-        ...m,
-        [convId]: [...cur, userLine, asstLine],
-      };
-    });
+
+    if (startedAsNewStream) {
+      setUnsavedThreadLines((u) => [...u, userLine, asstLine]);
+    } else {
+      const convId = selectedId as number;
+      setMessagesByConv((m) => {
+        const cur = m[convId] ?? [];
+        return { ...m, [convId]: [...cur, userLine, asstLine] };
+      });
+    }
     setIsStreamPending(true);
+
+    const applyDeltaToUnsaved = (updater: (t: string) => string) => {
+      setUnsavedThreadLines((prev) => {
+        const next = [...prev];
+        const i = next.findIndex((l) => l.id === asstId);
+        if (i >= 0) {
+          const cur = next[i]!;
+          next[i] = { ...cur, text: updater(cur.text) };
+        }
+        return next;
+      });
+    };
 
     try {
       await streamAiChat(
         {
           resumeId,
           userMessage: trimmed,
-          conversationId: convId,
-          purpose: conv.purpose,
+          ...(!startedAsNewStream && selectedId != null
+            ? { conversationId: selectedId }
+            : {}),
+          purpose,
           enableWebSearch: enableWebSearch || undefined,
         },
         (ev) => {
           const { data } = ev;
           if (ac.signal.aborted) return;
+
+          if (data.phase === 'meta') {
+            const m = data as { payload?: unknown };
+            const newId =
+              tryParseConversationIdFromStreamPayload(m.payload) ??
+              tryParseConversationIdFromStreamPayload(data);
+            if (
+              newId != null &&
+              startedAsNewStream &&
+              activeStreamConvIdRef.current == null
+            ) {
+              upsertStreamCreatedConversationInCache(
+                queryClient,
+                resumeId,
+                newId,
+              );
+              activeStreamConvIdRef.current = newId;
+              setUnsavedThreadLines((cur) => {
+                if (cur.length) {
+                  setMessagesByConv((m) => ({ ...m, [newId]: cur }));
+                }
+                return [];
+              });
+              skipNextHistoryLoadForConvIdRef.current = newId;
+              setSelectedId(newId);
+              void refetchConversations();
+            }
+            return;
+          }
+
           if (data.phase === 'message' && data.deltaText) {
-            appendLines(convId, (prev) => {
-              const next = [...prev];
-              const i = next.findIndex((l) => l.id === asstId);
-              if (i >= 0) {
-                const cur = next[i]!;
-                next[i] = {
-                  ...cur,
-                  text: cur.text + data.deltaText!,
-                };
-              }
-              return next;
-            });
+            const cid = activeStreamConvIdRef.current;
+            if (cid == null) {
+              applyDeltaToUnsaved((t) => t + data.deltaText!);
+            } else {
+              appendLines(cid, (prev) => {
+                const next = [...prev];
+                const i = next.findIndex((l) => l.id === asstId);
+                if (i >= 0) {
+                  const curL = next[i]!;
+                  next[i] = {
+                    ...curL,
+                    text: curL.text + data.deltaText!,
+                  };
+                }
+                return next;
+              });
+            }
             scrollToBottom();
             return;
           }
           if (data.phase === 'error') {
             const msg = (data.deltaText || '流式错误').trim();
-            appendLines(convId, (prev) => {
-              const next = [...prev];
-              const i = next.findIndex((l) => l.id === asstId);
-              if (i >= 0) {
-                const cur = next[i]!;
-                next[i] = {
-                  ...cur,
-                  text: cur.text ? `${cur.text}\n\n[错误] ${msg}` : msg,
-                  isStreaming: false,
-                };
-              }
-              return next;
-            });
+            const cid = activeStreamConvIdRef.current;
+            if (cid == null) {
+              setUnsavedThreadLines((prev) => {
+                const next = [...prev];
+                const i = next.findIndex((l) => l.id === asstId);
+                if (i >= 0) {
+                  const curL = next[i]!;
+                  next[i] = {
+                    ...curL,
+                    text: curL.text ? `${curL.text}\n\n[错误] ${msg}` : msg,
+                    isStreaming: false,
+                  };
+                }
+                return next;
+              });
+            } else {
+              appendLines(cid, (prev) => {
+                const next = [...prev];
+                const i = next.findIndex((l) => l.id === asstId);
+                if (i >= 0) {
+                  const curL = next[i]!;
+                  next[i] = {
+                    ...curL,
+                    text: curL.text ? `${curL.text}\n\n[错误] ${msg}` : msg,
+                    isStreaming: false,
+                  };
+                }
+                return next;
+              });
+            }
           }
         },
         { signal: ac.signal },
       );
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        appendLines(convId, (prev) => {
-          const next = [...prev];
-          const i = next.findIndex((l) => l.id === asstId);
-          if (i >= 0) {
-            next[i] = { ...next[i]!, isStreaming: false };
-          }
-          return next;
-        });
+        const cid = activeStreamConvIdRef.current;
+        if (cid == null) {
+          setUnsavedThreadLines((prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0) {
+              next[i] = { ...next[i]!, isStreaming: false };
+            }
+            return next;
+          });
+        } else {
+          appendLines(cid, (prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0) {
+              next[i] = { ...next[i]!, isStreaming: false };
+            }
+            return next;
+          });
+        }
       } else {
         const msg = e instanceof Error ? e.message : '发送失败';
-        appendLines(convId, (prev) => {
-          const next = [...prev];
-          const i = next.findIndex((l) => l.id === asstId);
-          if (i >= 0) {
-            const cur = next[i]!;
-            next[i] = {
-              ...cur,
-              text: cur.text ? `${cur.text}\n\n[错误] ${msg}` : msg,
-              isStreaming: false,
-            };
-          }
-          return next;
-        });
+        const cid = activeStreamConvIdRef.current;
+        if (cid == null) {
+          setUnsavedThreadLines((prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0) {
+              const curL = next[i]!;
+              next[i] = {
+                ...curL,
+                text: curL.text ? `${curL.text}\n\n[错误] ${msg}` : msg,
+                isStreaming: false,
+              };
+            }
+            return next;
+          });
+        } else {
+          appendLines(cid, (prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0) {
+              const curL = next[i]!;
+              next[i] = {
+                ...curL,
+                text: curL.text ? `${curL.text}\n\n[错误] ${msg}` : msg,
+                isStreaming: false,
+              };
+            }
+            return next;
+          });
+        }
         setSendError(msg);
       }
     } finally {
       if (!ac.signal.aborted) {
-        appendLines(convId, (prev) => {
-          const next = [...prev];
-          const i = next.findIndex((l) => l.id === asstId);
-          if (i >= 0 && next[i]!.isStreaming) {
-            next[i] = { ...next[i]!, isStreaming: false };
+        if (startedAsNewStream && activeStreamConvIdRef.current == null) {
+          const out = (await refetchConversations()) as {
+            data?: { list?: TAiConversation[] } | null;
+          };
+          const first = out.data?.list?.[0];
+          if (first != null) {
+            const nid = first.id;
+            activeStreamConvIdRef.current = nid;
+            setUnsavedThreadLines((cur) => {
+              if (cur.length) {
+                setMessagesByConv((m) => ({ ...m, [nid]: cur }));
+              }
+              return [];
+            });
+            skipNextHistoryLoadForConvIdRef.current = nid;
+            setSelectedId(nid);
           }
-          return next;
-        });
-        void refetchConversations();
+        }
+        const endId = activeStreamConvIdRef.current;
+        if (endId != null) {
+          appendLines(endId, (prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0 && next[i]!.isStreaming) {
+              next[i] = { ...next[i]!, isStreaming: false };
+            }
+            return next;
+          });
+        } else {
+          setUnsavedThreadLines((prev) => {
+            const next = [...prev];
+            const i = next.findIndex((l) => l.id === asstId);
+            if (i >= 0 && next[i]!.isStreaming) {
+              next[i] = { ...next[i]!, isStreaming: false };
+            }
+            return next;
+          });
+        }
+        await refetchConversations();
       }
       setIsStreamPending(false);
     }
@@ -502,7 +712,6 @@ function AiChatLayout() {
     isStreamPending,
     threadMessagesLoading,
     activeConversation,
-    createThread,
     resumeId,
     selectedId,
     setSelectedId,
@@ -510,9 +719,9 @@ function AiChatLayout() {
     scrollToBottom,
     refetchConversations,
     enableWebSearch,
+    queryClient,
   ]);
 
-  const [createError, setCreateError] = useState<string | null>(null);
   const renameModal = useOverlayState();
   const [renameTarget, setRenameTarget] = useState<TAiConversation | null>(
     null,
@@ -528,18 +737,17 @@ function AiChatLayout() {
   const headTitle = (() => {
     if (isError && error) return '无法加载';
     if (isLoading) return '加载中…';
+    if (pendingNewThread) return '新对话';
     if (activeConversation) return displayTitle(activeConversation);
+    if (selectedId == null) return '新对话';
     if (conversations.length === 0) return '暂无对话';
     return '未选择';
   })();
 
-  const onNewThread = async () => {
-    setCreateError(null);
-    try {
-      await createThread();
-    } catch (e) {
-      setCreateError(e instanceof Error ? e.message : '创建失败');
-    }
+  const onNewThread = () => {
+    startNewThreadDraft();
+    setUnsavedThreadLines([]);
+    setInputDraft('');
   };
 
   const openRename = (c: TAiConversation) => {
@@ -600,15 +808,11 @@ function AiChatLayout() {
             variant="ghost"
             isIconOnly
             className="h-8 w-8"
-            isDisabled={isLoading || isCreating}
+            isDisabled={isLoading}
             aria-label="新建对话"
             onPress={onNewThread}
           >
-            {isCreating ? (
-              <Spinner className="size-4" />
-            ) : (
-              <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-            )}
+            <Plus className="size-4" strokeWidth={2.25} aria-hidden />
           </Button>
           <Popover
             isOpen={historyOpen.isOpen}
@@ -688,11 +892,6 @@ function AiChatLayout() {
         </div>
       </header>
 
-      {createError ? (
-        <p className="text-danger shrink-0 px-3 pb-0.5 text-center text-xs">
-          {createError}
-        </p>
-      ) : null}
       {sendError ? (
         <p className="text-danger shrink-0 px-3 pb-0.5 text-center text-xs">
           {sendError}
@@ -791,7 +990,7 @@ function AiChatLayout() {
               variant={enableWebSearch ? 'secondary' : 'ghost'}
               className={
                 enableWebSearch
-                  ? 'text-foreground/90 h-6 min-h-0 gap-0.5 border border-accent/35 bg-accent/10 px-1.5 !py-0 text-[0.65rem] leading-tight'
+                  ? 'text-foreground/90 border-accent/35 bg-accent/10 h-6 min-h-0 gap-0.5 border px-1.5 !py-0 text-[0.65rem] leading-tight'
                   : 'text-default-600 h-6 min-h-0 gap-0.5 px-1.5 !py-0 text-[0.65rem] leading-tight'
               }
               aria-pressed={enableWebSearch}
@@ -910,7 +1109,7 @@ function AiChatLayout() {
                   取消
                 </Button>
                 <Button
-                  className="border-danger text-danger border"
+                  variant="danger-soft"
                   isDisabled={isDeleting}
                   onPress={confirmDelete}
                 >
