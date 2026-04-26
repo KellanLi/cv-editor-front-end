@@ -23,6 +23,7 @@ import {
 } from '@heroui/react';
 import {
   Clock,
+  Globe,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -275,6 +276,7 @@ function AiChatLayout() {
 
   const historyOpen = useOverlayState();
   const [mode, setMode] = useState<TMode>('ask');
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
   const [inputDraft, setInputDraft] = useState('');
 
   const [messagesByConv, setMessagesByConv] = useState<
@@ -414,6 +416,7 @@ function AiChatLayout() {
           userMessage: trimmed,
           conversationId: convId,
           purpose: conv.purpose,
+          enableWebSearch: enableWebSearch || undefined,
         },
         (ev) => {
           const { data } = ev;
@@ -506,6 +509,7 @@ function AiChatLayout() {
     appendLines,
     scrollToBottom,
     refetchConversations,
+    enableWebSearch,
   ]);
 
   const [createError, setCreateError] = useState<string | null>(null);
@@ -746,7 +750,7 @@ function AiChatLayout() {
             readOnly={isStreamPending || threadMessagesLoading}
             aria-busy={isStreamPending}
           />
-          <div className="absolute bottom-2 left-2 z-10 flex h-6 min-h-6 items-center">
+          <div className="absolute bottom-2 left-2 z-10 flex h-6 min-h-6 max-w-[calc(100%-5rem)] flex-wrap items-center gap-1.5">
             <Select
               aria-label="模式"
               value={mode}
@@ -781,6 +785,22 @@ function AiChatLayout() {
                 </ListBox>
               </Select.Popover>
             </Select>
+            <Button
+              type="button"
+              size="sm"
+              variant={enableWebSearch ? 'secondary' : 'ghost'}
+              className={
+                enableWebSearch
+                  ? 'text-foreground/90 h-6 min-h-0 gap-0.5 border border-accent/35 bg-accent/10 px-1.5 !py-0 text-[0.65rem] leading-tight'
+                  : 'text-default-600 h-6 min-h-0 gap-0.5 px-1.5 !py-0 text-[0.65rem] leading-tight'
+              }
+              aria-pressed={enableWebSearch}
+              isDisabled={isStreamPending || threadMessagesLoading}
+              onPress={() => setEnableWebSearch((v) => !v)}
+            >
+              <Globe className="size-3 shrink-0" aria-hidden />
+              联网搜索
+            </Button>
           </div>
           <div className="absolute right-2 bottom-2">
             <Button
