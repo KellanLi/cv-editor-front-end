@@ -164,7 +164,7 @@ export default function BuilderPage() {
               className="print:hidden bg-background shrink-0"
               style={{ width: leftWidth }}
             >
-              <LeftPanel />
+              <LeftPanel resumeId={resumeId} />
             </aside>
             <ResizeHandle
               ariaLabel="拖动调整左侧面板宽度"
