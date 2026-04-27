@@ -9,7 +9,10 @@ import { toChatLinesFromServerMessages } from '@/lib/ai/ai-message-text';
 import { streamAiChat } from '@/lib/ai/stream-chat';
 import { resumeAiConversationsQueryKey } from '@/lib/builder-resume-keys';
 import type { TAiConversationListRes } from '@/types/api/ai/conversation-list';
-import type { TAiConversation } from '@/types/business/ai-conversation';
+import type {
+  TAiConversation,
+  TAiConversationPurpose,
+} from '@/types/business/ai-conversation';
 import { AiChatMarkdown } from '@/components/ai-chat-markdown';
 import {
   Button,
@@ -104,6 +107,10 @@ function groupConversationsByPeriod(
 }
 
 type TMode = 'ask' | 'agent';
+const MODE_TO_PURPOSE: Record<TMode, TAiConversationPurpose> = {
+  ask: 'BASIC_QA',
+  agent: 'DIALOGUE_EDIT',
+};
 
 interface IHistoryRowProps {
   c: TAiConversation;
@@ -237,6 +244,7 @@ function upsertStreamCreatedConversationInCache(
   client: QueryClient,
   resumeId: number,
   newId: number,
+  purpose: TAiConversationPurpose,
 ) {
   const key = resumeAiConversationsQueryKey(
     resumeId,
@@ -246,7 +254,7 @@ function upsertStreamCreatedConversationInCache(
   const row: TAiConversation = {
     id: newId,
     resumeId,
-    purpose: 'DIALOGUE_EDIT',
+    purpose,
     threadId: '',
     title: null,
     status: 'active',
@@ -462,8 +470,7 @@ function AiChatLayout() {
     abortRef.current = ac;
 
     const startedAsNewStream = selectedId == null;
-    const purpose: TAiConversation['purpose'] =
-      activeConversation?.purpose ?? 'DIALOGUE_EDIT';
+    const purpose = MODE_TO_PURPOSE[mode];
 
     activeStreamConvIdRef.current = startedAsNewStream
       ? null
@@ -535,6 +542,7 @@ function AiChatLayout() {
                 queryClient,
                 resumeId,
                 newId,
+                purpose,
               );
               activeStreamConvIdRef.current = newId;
               setUnsavedThreadLines((cur) => {
@@ -711,7 +719,7 @@ function AiChatLayout() {
     inputDraft,
     isStreamPending,
     threadMessagesLoading,
-    activeConversation,
+    mode,
     resumeId,
     selectedId,
     setSelectedId,
