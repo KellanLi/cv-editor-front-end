@@ -8,6 +8,7 @@ import { listMessages } from '@/apis/ai';
 import { toChatLinesFromServerMessages } from '@/lib/ai/ai-message-text';
 import { streamAiChat } from '@/lib/ai/stream-chat';
 import { resumeAiConversationsQueryKey } from '@/lib/builder-resume-keys';
+import storage, { type TBuilderAiChatPrefs } from '@/lib/storage';
 import type { TAiConversationListRes } from '@/types/api/ai/conversation-list';
 import type {
   TAiConversation,
@@ -353,9 +354,23 @@ function AiChatLayout() {
 
   const queryClient = useQueryClient();
   const historyOpen = useOverlayState();
-  const [mode, setMode] = useState<TMode>('ask');
-  const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [aiPrefs, setAiPrefs] = useState<TBuilderAiChatPrefs>({
+    mode: 'ask',
+    enableWebSearch: false,
+  });
   const [inputDraft, setInputDraft] = useState('');
+
+  useEffect(() => {
+    setAiPrefs(storage.getBuilderAiChatPrefs());
+  }, []);
+
+  const patchAiPrefs = useCallback((patch: Partial<TBuilderAiChatPrefs>) => {
+    setAiPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      storage.setBuilderAiChatPrefs(next);
+      return next;
+    });
+  }, []);
 
   const [messagesByConv, setMessagesByConv] = useState<
     Record<number, TChatLine[]>
@@ -470,7 +485,7 @@ function AiChatLayout() {
     abortRef.current = ac;
 
     const startedAsNewStream = selectedId == null;
-    const purpose = MODE_TO_PURPOSE[mode];
+    const purpose = MODE_TO_PURPOSE[aiPrefs.mode];
 
     activeStreamConvIdRef.current = startedAsNewStream
       ? null
@@ -522,7 +537,7 @@ function AiChatLayout() {
             ? { conversationId: selectedId }
             : {}),
           purpose,
-          enableWebSearch: enableWebSearch || undefined,
+          enableWebSearch: aiPrefs.enableWebSearch || undefined,
         },
         (ev) => {
           const { data } = ev;
@@ -719,14 +734,14 @@ function AiChatLayout() {
     inputDraft,
     isStreamPending,
     threadMessagesLoading,
-    mode,
+    aiPrefs.mode,
+    aiPrefs.enableWebSearch,
     resumeId,
     selectedId,
     setSelectedId,
     appendLines,
     scrollToBottom,
     refetchConversations,
-    enableWebSearch,
     queryClient,
   ]);
 
@@ -960,11 +975,11 @@ function AiChatLayout() {
           <div className="absolute bottom-2 left-2 z-10 flex h-6 min-h-6 max-w-[calc(100%-5rem)] flex-wrap items-center gap-1.5">
             <Select
               aria-label="模式"
-              value={mode}
+              value={aiPrefs.mode}
               variant="secondary"
               className="w-[4.5rem] min-w-0 text-[0.65rem] leading-tight"
               onChange={(v) => {
-                if (v === 'ask' || v === 'agent') setMode(v);
+                if (v === 'ask' || v === 'agent') patchAiPrefs({ mode: v });
               }}
             >
               <Select.Trigger className="flex h-6 max-h-6 min-h-0 w-full flex-row items-center justify-start gap-1 px-1.5 !py-0 text-left text-[0.65rem] leading-tight">
@@ -995,15 +1010,17 @@ function AiChatLayout() {
             <Button
               type="button"
               size="sm"
-              variant={enableWebSearch ? 'secondary' : 'ghost'}
+              variant={aiPrefs.enableWebSearch ? 'secondary' : 'ghost'}
               className={
-                enableWebSearch
+                aiPrefs.enableWebSearch
                   ? 'text-foreground/90 border-accent/35 bg-accent/10 h-6 min-h-0 gap-0.5 border px-1.5 !py-0 text-[0.65rem] leading-tight'
                   : 'text-default-600 h-6 min-h-0 gap-0.5 px-1.5 !py-0 text-[0.65rem] leading-tight'
               }
-              aria-pressed={enableWebSearch}
+              aria-pressed={aiPrefs.enableWebSearch}
               isDisabled={isStreamPending || threadMessagesLoading}
-              onPress={() => setEnableWebSearch((v) => !v)}
+              onPress={() =>
+                patchAiPrefs({ enableWebSearch: !aiPrefs.enableWebSearch })
+              }
             >
               <Globe className="size-3 shrink-0" aria-hidden />
               联网搜索

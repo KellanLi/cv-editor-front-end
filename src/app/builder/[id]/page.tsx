@@ -7,11 +7,28 @@ import {
   resumeQueryKey,
   resumeSectionsQueryKey,
 } from '@/lib/builder-resume-keys';
+import {
+  BUILDER_LEFT_DEFAULT,
+  BUILDER_LEFT_MAX,
+  BUILDER_LEFT_MIN,
+  BUILDER_RIGHT_DEFAULT,
+  BUILDER_RIGHT_MAX,
+  BUILDER_RIGHT_MIN,
+} from '@/lib/builder-panel-sizes';
+import { useResumeAutoRefresh } from '@/lib/resume/use-resume-auto-refresh';
 import { ResumeSnapshotProvider } from '@/lib/resume-snapshot-context';
+import storage, { type TBuilderPanelPrefs } from '@/lib/storage';
 import type { TContentTemplate } from '@/types/business/content-template';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import BuilderTopBar, { type TSaveStatus } from './_components/builder-top-bar';
 import CenterPanel from './_components/center-panel';
 import { ResumeCoverCapture } from './_components/resume-cover-capture';
@@ -19,14 +36,6 @@ import ResumeCoverPreviewDebug from './_components/resume-cover-preview-debug';
 import LeftPanel from './_components/left-panel';
 import ResizeHandle from './_components/resize-handle';
 import RightPanel from './_components/right-panel';
-
-const LEFT_MIN = 240;
-const LEFT_MAX = 520;
-const LEFT_DEFAULT = 320;
-
-const RIGHT_MIN = 280;
-const RIGHT_MAX = 520;
-const RIGHT_DEFAULT = 320;
 
 /** 单简历模块数量通常远小于此值；分页拉满一页即可 */
 const SECTION_LIST_PAGE_SIZE = 500;
@@ -44,6 +53,7 @@ function parseResumeIdParam(raw: string | string[] | undefined): number | null {
 export default function BuilderPage() {
   const params = useParams<{ id: string }>();
   const resumeId = parseResumeIdParam(params.id);
+  useResumeAutoRefresh(resumeId);
 
   const {
     data: resume,
@@ -107,10 +117,97 @@ export default function BuilderPage() {
     return map;
   }, [contentTemplateData?.list]);
 
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
-  const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
-  const [rightWidth, setRightWidth] = useState(RIGHT_DEFAULT);
+  const [panelPrefs, setPanelPrefs] = useState<TBuilderPanelPrefs>({
+    leftWidth: BUILDER_LEFT_DEFAULT,
+    rightWidth: BUILDER_RIGHT_DEFAULT,
+    leftOpen: true,
+    rightOpen: true,
+  });
+  const persistWidthsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const latestPanelPrefsRef = useRef(panelPrefs);
+
+  useEffect(() => {
+    latestPanelPrefsRef.current = panelPrefs;
+  }, [panelPrefs]);
+
+  useEffect(() => {
+    const { leftWidth, rightWidth, leftOpen, rightOpen } =
+      storage.getBuilderPanelPrefs();
+    startTransition(() => {
+      setPanelPrefs({
+        leftWidth,
+        rightWidth,
+        leftOpen,
+        rightOpen,
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (persistWidthsTimerRef.current == null) return;
+      clearTimeout(persistWidthsTimerRef.current);
+      persistWidthsTimerRef.current = null;
+      storage.setBuilderPanelPrefs(latestPanelPrefsRef.current);
+    };
+  }, []);
+
+  const schedulePersistPanelPrefs = useCallback(() => {
+    if (persistWidthsTimerRef.current != null) {
+      clearTimeout(persistWidthsTimerRef.current);
+    }
+    persistWidthsTimerRef.current = setTimeout(() => {
+      persistWidthsTimerRef.current = null;
+      storage.setBuilderPanelPrefs(latestPanelPrefsRef.current);
+    }, 200);
+  }, []);
+
+  const setLeftWidth = useCallback(
+    (w: number) => {
+      setPanelPrefs((prev) => {
+        const next = { ...prev, leftWidth: w };
+        latestPanelPrefsRef.current = next;
+        schedulePersistPanelPrefs();
+        return next;
+      });
+    },
+    [schedulePersistPanelPrefs],
+  );
+
+  const setRightWidth = useCallback(
+    (w: number) => {
+      setPanelPrefs((prev) => {
+        const next = { ...prev, rightWidth: w };
+        latestPanelPrefsRef.current = next;
+        schedulePersistPanelPrefs();
+        return next;
+      });
+    },
+    [schedulePersistPanelPrefs],
+  );
+
+  const toggleLeftOpen = useCallback(() => {
+    setPanelPrefs((prev) => {
+      const next = { ...prev, leftOpen: !prev.leftOpen };
+      latestPanelPrefsRef.current = next;
+      storage.patchBuilderPanelPrefs({ leftOpen: next.leftOpen });
+      return next;
+    });
+  }, []);
+
+  const toggleRightOpen = useCallback(() => {
+    setPanelPrefs((prev) => {
+      const next = { ...prev, rightOpen: !prev.rightOpen };
+      latestPanelPrefsRef.current = next;
+      storage.patchBuilderPanelPrefs({ rightOpen: next.rightOpen });
+      return next;
+    });
+  }, []);
+
+  const { leftWidth, rightWidth, leftOpen, rightOpen } = panelPrefs;
+
   const [status] = useState<TSaveStatus>('saved');
   const captureRootRef = useRef<HTMLDivElement>(null);
 
@@ -141,8 +238,8 @@ export default function BuilderPage() {
         status={status}
         leftPanelOpen={leftOpen}
         rightPanelOpen={rightOpen}
-        onToggleLeftPanel={() => setLeftOpen((v) => !v)}
-        onToggleRightPanel={() => setRightOpen((v) => !v)}
+        onToggleLeftPanel={toggleLeftOpen}
+        onToggleRightPanel={toggleRightOpen}
         onExport={() => {
           window.print();
         }}
@@ -169,8 +266,8 @@ export default function BuilderPage() {
             <ResizeHandle
               ariaLabel="拖动调整左侧面板宽度"
               currentWidth={leftWidth}
-              minWidth={LEFT_MIN}
-              maxWidth={LEFT_MAX}
+              minWidth={BUILDER_LEFT_MIN}
+              maxWidth={BUILDER_LEFT_MAX}
               computeWidth={(dx, base) => base + dx}
               onChange={setLeftWidth}
             />
@@ -203,8 +300,8 @@ export default function BuilderPage() {
             <ResizeHandle
               ariaLabel="拖动调整右侧面板宽度"
               currentWidth={rightWidth}
-              minWidth={RIGHT_MIN}
-              maxWidth={RIGHT_MAX}
+              minWidth={BUILDER_RIGHT_MIN}
+              maxWidth={BUILDER_RIGHT_MAX}
               computeWidth={(dx, base) => base - dx}
               onChange={setRightWidth}
             />
