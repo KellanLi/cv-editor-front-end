@@ -434,6 +434,8 @@ function AiChatLayout() {
   /** 流式首条刚返回 `conversationId` 时跳过 `listMessages`，避免用空/不完整服务端列表覆盖正在流式更新的本地消息 */
   const skipNextHistoryLoadForConvIdRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  /** 避免中文等 IME 下按 Enter 选词/上屏时被当成发送 */
+  const imeComposingRef = useRef(false);
 
   const isDraftListView = useMemo(
     () =>
@@ -1052,11 +1054,19 @@ function AiChatLayout() {
             placeholder="输入问题或指令，Enter 发送，Shift+Enter 换行"
             value={inputDraft}
             onChange={(e) => setInputDraft(e.target.value)}
+            onCompositionStart={() => {
+              imeComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              window.setTimeout(() => {
+                imeComposingRef.current = false;
+              }, 0);
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!isStreamPending) void sendUserMessage();
-              }
+              if (e.key !== 'Enter' || e.shiftKey) return;
+              if (e.nativeEvent.isComposing || imeComposingRef.current) return;
+              e.preventDefault();
+              if (!isStreamPending) void sendUserMessage();
             }}
             readOnly={isStreamPending || threadMessagesLoading}
             aria-busy={isStreamPending}
