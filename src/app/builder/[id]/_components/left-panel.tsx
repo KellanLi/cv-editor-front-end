@@ -5,9 +5,13 @@ import {
   useResumeAiConversation,
 } from './resume-ai-conversation-context';
 import { listMessages } from '@/apis/ai';
+import { detail, updateJobDescription } from '@/apis/resume';
 import { toChatLinesFromServerMessages } from '@/lib/ai/ai-message-text';
 import { streamAiChat } from '@/lib/ai/stream-chat';
-import { resumeAiConversationsQueryKey } from '@/lib/builder-resume-keys';
+import {
+  resumeAiConversationsQueryKey,
+  resumeQueryKey,
+} from '@/lib/builder-resume-keys';
 import storage, { type TBuilderAiChatPrefs } from '@/lib/storage';
 import type { TAiConversationListRes } from '@/types/api/ai/conversation-list';
 import type {
@@ -28,6 +32,7 @@ import {
   useOverlayState,
 } from '@heroui/react';
 import {
+  Briefcase,
   Clock,
   Globe,
   MoreHorizontal,
@@ -36,7 +41,11 @@ import {
   SendHorizontal,
   Trash2,
 } from 'lucide-react';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
@@ -89,6 +98,32 @@ const HISTORY_SECTIONS: { bucket: THistoryBucket; label: string }[] = [
   { bucket: 'week', label: '一周内' },
   { bucket: 'older', label: '一周前' },
 ];
+
+function jobDescriptionToDraft(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return '';
+  }
+}
+
+function draftToJobDescriptionPayload(draft: string): unknown | null {
+  const t = draft.trim();
+  if (t === '') return null;
+  const looksJson =
+    (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'));
+  if (looksJson) {
+    try {
+      return JSON.parse(t) as unknown;
+    } catch {
+      return draft;
+    }
+  }
+  return draft;
+}
 
 function groupConversationsByPeriod(
   list: TAiConversation[],
@@ -353,6 +388,16 @@ function AiChatLayout() {
   } = useResumeAiConversation();
 
   const queryClient = useQueryClient();
+  const { data: resumeDetail } = useQuery({
+    queryKey: resumeQueryKey(resumeId),
+    queryFn: async () => {
+      const res = await detail({ id: resumeId });
+      if (res.code !== 0) {
+        throw new Error(res.message || '简历加载失败');
+      }
+      return res.data;
+    },
+  });
   const historyOpen = useOverlayState();
   const [aiPrefs, setAiPrefs] = useState<TBuilderAiChatPrefs>({
     mode: 'ask',
@@ -756,6 +801,10 @@ function AiChatLayout() {
     null,
   );
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const jdModal = useOverlayState();
+  const [jdDraft, setJdDraft] = useState('');
+  const [jdError, setJdError] = useState<string | null>(null);
+  const [jdSaving, setJdSaving] = useState(false);
 
   const headTitle = (() => {
     if (isError && error) return '无法加载';
@@ -810,6 +859,34 @@ function AiChatLayout() {
     }
   };
 
+  const openJdModal = () => {
+    setJdError(null);
+    setJdDraft(jobDescriptionToDraft(resumeDetail?.jobDescriptionText));
+    jdModal.open();
+  };
+
+  const submitJd = async () => {
+    setJdError(null);
+    setJdSaving(true);
+    try {
+      const res = await updateJobDescription({
+        id: resumeId,
+        jobDescriptionText: draftToJobDescriptionPayload(jdDraft),
+      });
+      if (res.code !== 0) {
+        throw new Error(res.message || '保存失败');
+      }
+      await queryClient.invalidateQueries({
+        queryKey: resumeQueryKey(resumeId),
+      });
+      jdModal.close();
+    } catch (e) {
+      setJdError(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setJdSaving(false);
+    }
+  };
+
   const groupedConversations = useMemo(
     () => groupConversationsByPeriod(conversations),
     [conversations],
@@ -836,6 +913,18 @@ function AiChatLayout() {
             onPress={onNewThread}
           >
             <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            isIconOnly
+            className="h-8 w-8"
+            isDisabled={isLoading || jdSaving}
+            aria-label="职位描述 JD"
+            onPress={openJdModal}
+          >
+            <Briefcase className="size-4" strokeWidth={2} aria-hidden />
           </Button>
           <Popover
             isOpen={historyOpen.isOpen}
@@ -1140,6 +1229,59 @@ function AiChatLayout() {
                 >
                   {isDeleting ? <Spinner className="size-4" /> : null}
                   删除
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+
+      <Modal state={jdModal}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg" placement="center" className="max-h-[90vh]">
+            <Modal.Dialog className="flex max-h-[min(36rem,88vh)] flex-col">
+              <Modal.Header>
+                <Modal.Heading>职位描述（JD）</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="flex min-h-0 flex-1 flex-col gap-2">
+                <p className="text-default-500 text-xs leading-snug">
+                  左侧 AI 对话会复用此处内容。清空后保存可移除 JD。
+                </p>
+                <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor="builder-jd-textarea"
+                    className="text-default-600 text-xs font-medium"
+                  >
+                    JD 全文
+                  </Label>
+                  <textarea
+                    id="builder-jd-textarea"
+                    className="border-default-200 text-foreground placeholder:text-muted/70 focus:ring-accent/25 max-h-[min(22rem,55vh)] min-h-48 w-full flex-1 resize-y rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none focus:ring-2"
+                    value={jdDraft}
+                    onChange={(e) => setJdDraft(e.target.value)}
+                    disabled={jdSaving}
+                    placeholder="粘贴岗位描述、任职要求等…"
+                    spellCheck={false}
+                  />
+                </div>
+                {jdError ? (
+                  <p className="text-danger text-sm">{jdError}</p>
+                ) : null}
+              </Modal.Body>
+              <Modal.Footer className="gap-2">
+                <Button
+                  variant="secondary"
+                  isDisabled={jdSaving}
+                  onPress={() => {
+                    setJdError(null);
+                    jdModal.close();
+                  }}
+                >
+                  取消
+                </Button>
+                <Button isDisabled={jdSaving} onPress={() => void submitJd()}>
+                  {jdSaving ? <Spinner className="size-4" /> : null}
+                  保存
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

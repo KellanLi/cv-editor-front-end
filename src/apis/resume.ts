@@ -3,6 +3,7 @@ import type { TResumeCreateReq } from '@/types/api/resume/create';
 import type { TResumeDeleteReq } from '@/types/api/resume/delete';
 import type { TResumeDetailReq } from '@/types/api/resume/detail';
 import type { TResumeListReq, TResumeListRes } from '@/types/api/resume/list';
+import type { TResumeUpdateJobDescriptionReq } from '@/types/api/resume/update-job-description';
 import type { TResumeUpdateListCoverReq } from '@/types/api/resume/update-list-cover';
 import type { TResumeUpdateProfileReq } from '@/types/api/resume/update-profile';
 import type { TResumeUpdateTitleReq } from '@/types/api/resume/update-title';
@@ -31,6 +32,11 @@ export function updateTitle(params: TResumeUpdateTitleReq) {
 
 export function updateProfile(params: TResumeUpdateProfileReq) {
   return post<TResume>('/resume/update-profile', params);
+}
+
+/** 修改简历关联的职位描述（JD）全文 */
+export function updateJobDescription(params: TResumeUpdateJobDescriptionReq) {
+  return post<TResume>('/resume/update-job-description', params);
 }
 
 /** 修改列表展示用封面图（`UpdateResumeListCoverDto`） */
