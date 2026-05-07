@@ -105,9 +105,9 @@ const Form: TFormFC = (props) => {
       <Label>{labels[0]}</Label>
       <div
         data-slot="input"
-        className={`${inputVariants({ fullWidth: true, variant: 'primary' })} flex min-h-0 !flex-col !p-0 overflow-hidden transition-[background-color,border-color,box-shadow] [transition-duration:150ms] [transition-timing-function:var(--ease-out)] motion-reduce:transition-none hover:not-focus-within:border-field-border-hover hover:not-focus-within:bg-field-hover focus-within:border-field-border-focus focus-within:bg-field-focus focus-within:status-focused-field`}
+        className={`${inputVariants({ fullWidth: true, variant: 'primary' })} hover:not-focus-within:border-field-border-hover hover:not-focus-within:bg-field-hover focus-within:border-field-border-focus focus-within:bg-field-focus focus-within:status-focused-field flex min-h-0 !flex-col overflow-hidden !p-0 transition-[background-color,border-color,box-shadow] [transition-duration:150ms] [transition-timing-function:var(--ease-out)] motion-reduce:transition-none`}
       >
-        <div className="w-full min-w-0 border-b border-separator">
+        <div className="border-separator w-full min-w-0 border-b">
           <RichTextToolbar editor={editor} />
         </div>
         <div className="min-h-0 px-3 py-2">
@@ -150,11 +150,13 @@ function isRichTextDocVisuallyEmpty(html: string | undefined): boolean {
   const t = html.trim();
   if (!t || t === EMPTY_DOC) return true;
   if (typeof document === 'undefined') {
-    return t
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&[a-z]+;|#x?[0-9a-fA-F]+;/g, ' ')
-      .trim() === '';
+    return (
+      t
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&[a-z]+;|#x?[0-9a-fA-F]+;/g, ' ')
+        .trim() === ''
+    );
   }
   const d = document.createElement('div');
   d.innerHTML = t;

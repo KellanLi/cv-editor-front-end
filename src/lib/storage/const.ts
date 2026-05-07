@@ -5,4 +5,6 @@ export const enum STORAGE_KEY {
   BUILDER_AI_CHAT = "builderAiChat",
   /** 简历 builder 左右侧栏宽度与展开状态 */
   BUILDER_PANEL_WIDTHS = "builderPanelWidths",
+  /** 简历 builder AI 诊断任务与缓存 */
+  BUILDER_RESUME_DIAGNOSIS = "builderResumeDiagnosis",
 }

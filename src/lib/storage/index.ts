@@ -4,6 +4,7 @@ import {
   clampBuilderLeftWidth,
   clampBuilderRightWidth,
 } from '@/lib/builder-panel-sizes';
+import type { TResumeDiagnosisTaskSnapshot } from '@/types/business/resume-diagnosis-task';
 import { STORAGE_KEY } from './const';
 import { TToken } from '@/types/business/token';
 
@@ -78,6 +79,60 @@ function parseBuilderAiChatPrefs(raw: string | null): TBuilderAiChatPrefs {
   }
 }
 
+function parseBuilderResumeDiagnosisState(
+  raw: string | null,
+): Record<number, TResumeDiagnosisTaskSnapshot> {
+  if (raw == null) return {};
+  try {
+    const o = JSON.parse(raw) as unknown;
+    if (typeof o !== 'object' || o == null) return {};
+    const rec = o as Record<string, unknown>;
+    const out: Record<number, TResumeDiagnosisTaskSnapshot> = {};
+    for (const [k, value] of Object.entries(rec)) {
+      const resumeId = Number(k);
+      if (!Number.isInteger(resumeId) || resumeId <= 0) continue;
+      if (typeof value !== 'object' || value == null) continue;
+      const item = value as Record<string, unknown>;
+      if (typeof item.taskId !== 'string' || !item.taskId.trim()) continue;
+      if (
+        item.status !== 'queued' &&
+        item.status !== 'running' &&
+        item.status !== 'succeeded' &&
+        item.status !== 'failed' &&
+        item.status !== 'cancelled'
+      ) {
+        continue;
+      }
+      const startedAt =
+        typeof item.startedAt === 'number' && Number.isFinite(item.startedAt)
+          ? item.startedAt
+          : Date.now();
+      const updatedAt =
+        typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt)
+          ? item.updatedAt
+          : startedAt;
+      out[resumeId] = {
+        resumeId,
+        taskId: item.taskId,
+        status: item.status,
+        startedAt,
+        updatedAt,
+        errorMessage:
+          typeof item.errorMessage === 'string' ? item.errorMessage : undefined,
+        report: item.report as TResumeDiagnosisTaskSnapshot['report'],
+        reportCachedAt:
+          typeof item.reportCachedAt === 'number' &&
+          Number.isFinite(item.reportCachedAt)
+            ? item.reportCachedAt
+            : undefined,
+      };
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 const storage = {
   setToken: (param: TToken) => {
     localStorage.setItem(STORAGE_KEY.TOKEN, JSON.stringify(param));
@@ -109,6 +164,45 @@ const storage = {
     localStorage.setItem(
       STORAGE_KEY.BUILDER_PANEL_WIDTHS,
       JSON.stringify({ ...cur, ...patch }),
+    );
+  },
+  getBuilderResumeDiagnosisState: (): Record<
+    number,
+    TResumeDiagnosisTaskSnapshot
+  > => {
+    return parseBuilderResumeDiagnosisState(
+      localStorage.getItem(STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS),
+    );
+  },
+  setBuilderResumeDiagnosisState: (
+    value: Record<number, TResumeDiagnosisTaskSnapshot>,
+  ) => {
+    localStorage.setItem(
+      STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS,
+      JSON.stringify(value),
+    );
+  },
+  upsertBuilderResumeDiagnosisItem: (item: TResumeDiagnosisTaskSnapshot) => {
+    const cur = parseBuilderResumeDiagnosisState(
+      localStorage.getItem(STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS),
+    );
+    localStorage.setItem(
+      STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS,
+      JSON.stringify({
+        ...cur,
+        [item.resumeId]: item,
+      }),
+    );
+  },
+  clearBuilderResumeDiagnosisItem: (resumeId: number) => {
+    const cur = parseBuilderResumeDiagnosisState(
+      localStorage.getItem(STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS),
+    );
+    if (!(resumeId in cur)) return;
+    delete cur[resumeId];
+    localStorage.setItem(
+      STORAGE_KEY.BUILDER_RESUME_DIAGNOSIS,
+      JSON.stringify(cur),
     );
   },
 };

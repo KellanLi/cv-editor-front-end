@@ -16,10 +16,16 @@ export async function request<T = unknown>(
     ...(token ? { Authorization: `Bearer ${token.value}` } : {}),
   };
 
-  const res = await fetch(BASE_URL + url, { ...options, headers });
+  const requestUrl = BASE_URL + url;
+  const res = await fetch(requestUrl, { ...options, headers });
+
+  // 某些运行时/中间层异常情况下可能返回非标准 Response，避免直接读取 `.ok` 崩溃。
+  if (res == null || typeof res.ok !== 'boolean') {
+    throw new Error('请求失败：未收到有效响应');
+  }
 
   if (!res.ok) {
-    throw new Error(res.statusText);
+    throw new Error(res.statusText || `请求失败（${res.status}）`);
   }
 
   return await res.json();
@@ -70,15 +76,20 @@ export async function postSse(
     ...(token ? { Authorization: `Bearer ${token.value}` } : {}),
   };
 
-  const res = await fetch(BASE_URL + url, {
+  const requestUrl = BASE_URL + url;
+  const res = await fetch(requestUrl, {
     ...options,
     method: 'POST',
     body: data !== undefined ? JSON.stringify(data) : undefined,
     headers,
   });
 
+  if (res == null || typeof res.ok !== 'boolean') {
+    throw new Error('请求失败：未收到有效响应');
+  }
+
   if (!res.ok) {
-    throw new Error(res.statusText);
+    throw new Error(res.statusText || `请求失败（${res.status}）`);
   }
 
   return res;

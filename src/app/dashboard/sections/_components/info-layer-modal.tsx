@@ -1,10 +1,4 @@
-import {
-  Button,
-  Checkbox,
-  CheckboxGroup,
-  Label,
-  Modal,
-} from '@heroui/react';
+import { Button, Checkbox, CheckboxGroup, Label, Modal } from '@heroui/react';
 import { INFO_LAYER, INFO_LAYER_MAP } from '@/components/info-layer/const';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -61,7 +55,7 @@ export default function InfoLayerModal(props: IProps) {
                       key={key}
                       className={[
                         // 对齐官方 Features and Add-ons 示例；用 ! 保证覆盖 checkbox 基础类里的背景
-                        'group relative w-full flex-col gap-4 rounded-3xl border border-foreground/10 bg-surface px-5 py-4 transition-all',
+                        'group border-foreground/10 bg-surface relative w-full flex-col gap-4 rounded-3xl border px-5 py-4 transition-all',
                         'data-[selected=true]:border-accent/40 data-[selected=true]:!bg-accent/10',
                         'aria-[checked=true]:border-accent/40 aria-[checked=true]:!bg-accent/10',
                       ].join(' ')}

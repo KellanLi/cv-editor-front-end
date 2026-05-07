@@ -3,7 +3,9 @@
 import type { TContentTemplate } from '@/types/business/content-template';
 import type { TSection } from '@/types/business/section';
 import { Spinner, Tabs } from '@heroui/react';
+import { useMemo, useSyncExternalStore } from 'react';
 import AddSectionModal from './add-section-modal';
+import ResumeDiagnosisPanel from './resume-diagnosis-panel';
 import SectionList from './section-list';
 
 const TAB_KEYS = {
@@ -11,6 +13,39 @@ const TAB_KEYS = {
   DESIGN: 'design',
   DIAGNOSIS: 'diagnosis',
 } as const;
+
+const RIGHT_PANEL_TAB_STORAGE_KEY = 'builderRightPanelSelectedTab';
+const RIGHT_PANEL_TAB_CHANGE_EVENT = 'builder-right-panel-tab-change';
+const EMPTY_SUBSCRIBE = () => () => {};
+
+function isTabKey(v: string | null): v is (typeof TAB_KEYS)[keyof typeof TAB_KEYS] {
+  return (
+    v === TAB_KEYS.SECTIONS || v === TAB_KEYS.DESIGN || v === TAB_KEYS.DIAGNOSIS
+  );
+}
+
+function getStoredSelectedTab() {
+  if (typeof window === 'undefined') return TAB_KEYS.SECTIONS;
+  const raw = window.localStorage.getItem(RIGHT_PANEL_TAB_STORAGE_KEY);
+  return isTabKey(raw) ? raw : TAB_KEYS.SECTIONS;
+}
+
+function subscribeSelectedTab(onStoreChange: () => void) {
+  if (typeof window === 'undefined') return () => {};
+  const onStorage = (event: StorageEvent) => {
+    if (event.key != null && event.key !== RIGHT_PANEL_TAB_STORAGE_KEY) return;
+    onStoreChange();
+  };
+  const onInternalChange = () => {
+    onStoreChange();
+  };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener(RIGHT_PANEL_TAB_CHANGE_EVENT, onInternalChange);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener(RIGHT_PANEL_TAB_CHANGE_EVENT, onInternalChange);
+  };
+}
 
 interface IProps {
   resumeId: number | null;
@@ -31,10 +66,36 @@ export default function RightPanel(props: IProps) {
     sectionsError,
     contentTemplateMap,
   } = props;
+  const isClientReady = useSyncExternalStore(
+    EMPTY_SUBSCRIBE,
+    () => true,
+    () => false,
+  );
+  const selectedKey = useSyncExternalStore(
+    subscribeSelectedTab,
+    getStoredSelectedTab,
+    () => TAB_KEYS.SECTIONS,
+  );
+
+  const sectionLabel = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const s of sections) {
+      const tpl = contentTemplateMap.get(s.contentTemplateId);
+      map.set(s.id, tpl?.name?.trim() ? tpl.name : `模块 #${s.id}`);
+    }
+    return (sectionId: number) => map.get(sectionId) ?? `模块 #${sectionId}`;
+  }, [sections, contentTemplateMap]);
 
   return (
     <Tabs
-      defaultSelectedKey={TAB_KEYS.SECTIONS}
+      key={isClientReady ? 'tabs-client' : 'tabs-ssr'}
+      selectedKey={isClientReady ? selectedKey : TAB_KEYS.SECTIONS}
+      onSelectionChange={(key) => {
+        const next = String(key);
+        if (!isTabKey(next)) return;
+        window.localStorage.setItem(RIGHT_PANEL_TAB_STORAGE_KEY, next);
+        window.dispatchEvent(new Event(RIGHT_PANEL_TAB_CHANGE_EVENT));
+      }}
       className="flex h-full min-h-0 flex-col"
     >
       <Tabs.ListContainer className="mt-2 shrink-0 px-3">
@@ -99,9 +160,9 @@ export default function RightPanel(props: IProps) {
 
       <Tabs.Panel
         id={TAB_KEYS.DIAGNOSIS}
-        className="text-muted flex min-h-0 flex-1 items-center justify-center p-4 text-sm"
+        className="flex min-h-0 flex-1 flex-col p-4"
       >
-        AI 诊断建设中
+        <ResumeDiagnosisPanel resumeId={resumeId} sectionLabel={sectionLabel} />
       </Tabs.Panel>
     </Tabs>
   );

@@ -15,6 +15,18 @@ import type {
 } from '@/types/api/ai/global-context-list';
 import type { TAiGlobalContextUpsertReq } from '@/types/api/ai/global-context-upsert';
 import type { TAiMessageListReq, TAiMessageListRes } from '@/types/api/ai/message-list';
+import type {
+  TAiResumeDiagnoseReq,
+  TAiResumeDiagnoseRes,
+} from '@/types/api/ai/resume-diagnose';
+import type {
+  TAiResumeDiagnoseStartReq,
+  TAiResumeDiagnoseStartRes,
+} from '@/types/api/ai/resume-diagnose-start';
+import type {
+  TAiResumeDiagnoseStatusReq,
+  TAiResumeDiagnoseStatusRes,
+} from '@/types/api/ai/resume-diagnose-status';
 import type { TAiConversation } from '@/types/business/ai-conversation';
 import type { TAiGlobalContext } from '@/types/business/ai-global-context';
 
@@ -57,6 +69,21 @@ export function removeGlobalContext(params: TAiGlobalContextDeleteReq) {
 
 export function sendChat(params: TSendAiChatReq) {
   return post<TSendAiChatRes>('/ai/chat/send', params);
+}
+
+/** 简历 AI 诊断（同步）：JD → 编写思路 → 评价维度 → 打分 → 分块与整体建议 */
+export function diagnoseResume(params: TAiResumeDiagnoseReq) {
+  return post<TAiResumeDiagnoseRes>('/ai/resume/diagnose', params);
+}
+
+/** 发起简历 AI 诊断异步任务，返回可恢复的 `taskId`。 */
+export function startResumeDiagnoseTask(params: TAiResumeDiagnoseStartReq) {
+  return post<TAiResumeDiagnoseStartRes>('/ai/resume/diagnose/start', params);
+}
+
+/** 查询简历 AI 诊断异步任务状态与结果。 */
+export function getResumeDiagnoseTaskStatus(params: TAiResumeDiagnoseStatusReq) {
+  return post<TAiResumeDiagnoseStatusRes>('/ai/resume/diagnose/status', params);
 }
 
 /**

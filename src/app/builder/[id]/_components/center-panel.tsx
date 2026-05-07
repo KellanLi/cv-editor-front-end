@@ -60,7 +60,12 @@ const CenterPanel = forwardRef<HTMLDivElement, IProps>(
       <div className="flex h-full min-h-0 w-full min-w-0 flex-col print:h-auto print:min-h-0">
         <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden print:overflow-visible">
           <div className="absolute inset-0 overflow-auto print:static print:inset-auto print:h-auto print:overflow-visible">
-            <div className="flex w-full min-w-0 flex-col items-center px-4 py-8 print:px-0 print:py-0">
+            {/*
+              `w-max min-w-full`：横向可滚区域宽度取 max(视口, 简历布局宽)，避免居中 + zoom 时
+              仅用 `w-full min-w-0` 导致 scrollWidth 偏小、滑到最左仍裁切左侧内容。
+              `px-8`：左右留白，滑到边缘时仍有呼吸空间。
+            */}
+            <div className="flex w-max min-w-full flex-col items-center px-8 py-8 print:w-full print:min-w-0 print:px-0 print:py-0">
               <div
                 ref={ref}
                 data-resume-capture-root
